@@ -1,0 +1,10 @@
+**
+!/download.py
+!/entrypoint.sh
+!/LICENSE
+!/requirements.txt
+!/update_verifier/LICENSE
+!/update_verifier/lineageos_pubkey
+!/update_verifier/requirements.txt
+!/update_verifier/update_verifier.py
+

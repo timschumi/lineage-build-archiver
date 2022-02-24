@@ -1,0 +1,3 @@
+[submodule "update_verifier"]
+	path = update_verifier
+	url = https://github.com/LineageOS/update_verifier

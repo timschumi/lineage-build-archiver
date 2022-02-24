@@ -1,0 +1,3 @@
+-r update_verifier/requirements.txt
+
+requests
