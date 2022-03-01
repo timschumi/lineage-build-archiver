@@ -88,7 +88,7 @@ def main():
 
         data = r.json()['response']
 
-        for entry in data:
+        for entry in sorted(data, key=lambda x: x["datetime"], reverse=True):
             filepath = os.path.join(args.output, device, entry["version"], entry["filename"])
 
             if not os.path.isdir(filepath_dirname := os.path.dirname(filepath)):
