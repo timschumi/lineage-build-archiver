@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--channel', '-c', action='store', help='The release channel to download', dest='channel', default='nightly')
     parser.add_argument('--output', '-o', action='store', help='The output folder to store downloads into', dest='output', required=True)
     parser.add_argument('--key', '-k', action='store', help='The public key to check file signatures against', dest='key', default='update_verifier/lineageos_pubkey')
+    parser.add_argument('--retain', '-r', action='store', help='The number of builds to be kept', dest='retain', type=int, default=None)
     args = parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
@@ -87,8 +88,20 @@ def main():
             continue
 
         data = r.json()['response']
+        remaining_number_of_builds = {}
+        processed_builds = []
 
         for entry in sorted(data, key=lambda x: x["datetime"], reverse=True):
+            if entry["version"] not in remaining_number_of_builds:
+                remaining_number_of_builds[entry["version"]] = 0 if args.retain is None else args.retain
+
+            if args.retain is not None and remaining_number_of_builds[entry["version"]] <= 0:
+                break
+
+            processed_builds.append(entry)
+            remaining_number_of_builds[entry["version"]] -= 1
+
+        for entry in processed_builds:
             filepath = os.path.join(args.output, device, entry["version"], entry["filename"])
 
             if not os.path.isdir(filepath_dirname := os.path.dirname(filepath)):
@@ -117,6 +130,26 @@ def main():
                 os.remove(filepath)
                 continue
 
+        # If the number of kept builds is unlimited, we are done now
+        if args.retain is None:
+            continue
+
+        for version in set([e["version"] for e in processed_builds]):
+            versiondir = os.path.join(args.output, device, version)
+            local_builds = set(os.listdir(versiondir))
+
+            # Builds that were just downloaded are already accounted for
+            local_builds = local_builds - set([e["filename"] for e in processed_builds])
+
+            # Traverse the remaining builds starting from the newest and remove any that do not fit
+            for filename in sorted(local_builds, reverse=True):
+                if remaining_number_of_builds[version] > 0:
+                    remaining_number_of_builds[version] -= 1
+                    continue
+
+                filepath = os.path.join(versiondir, filename)
+                logging.info("Removing file '%s'", filepath)
+                os.remove(filepath)
 
 if __name__ == '__main__':
     sys.exit(main())
