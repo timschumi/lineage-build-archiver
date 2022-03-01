@@ -108,7 +108,7 @@ def main():
                 os.makedirs(filepath_dirname)
 
             if os.path.isfile(filepath):
-                logging.info("File '%s' exists, skipping download.", filepath)
+                logging.debug("File '%s' exists, skipping download.", filepath)
             elif os.path.isfile(oldpath := os.path.join(args.output, device, entry["filename"])):
                 logging.info("Moving file '%s' to '%s'", oldpath, filepath)
                 os.rename(oldpath, filepath)
