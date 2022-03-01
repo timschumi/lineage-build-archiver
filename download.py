@@ -78,11 +78,6 @@ def main():
         os.makedirs(args.output)
 
     for device in devices:
-        deviceoutdir = os.path.join(args.output, device)
-
-        if not os.path.isdir(deviceoutdir):
-            os.makedirs(deviceoutdir)
-
         url = f"{args.updater}/api/v1/{device}/{args.channel}/unused"
 
         r = requests.get(url)
@@ -94,10 +89,16 @@ def main():
         data = r.json()['response']
 
         for entry in data:
-            filepath = os.path.join(deviceoutdir, entry["filename"])
+            filepath = os.path.join(args.output, device, entry["version"], entry["filename"])
+
+            if not os.path.isdir(filepath_dirname := os.path.dirname(filepath)):
+                os.makedirs(filepath_dirname)
 
             if os.path.isfile(filepath):
                 logging.info("File '%s' exists, skipping download.", filepath)
+            elif os.path.isfile(oldpath := os.path.join(args.output, device, entry["filename"])):
+                logging.info("Moving file '%s' to '%s'", oldpath, filepath)
+                os.rename(oldpath, filepath)
             else:
                 logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
                 urllib.request.urlretrieve(entry["url"], filepath)
