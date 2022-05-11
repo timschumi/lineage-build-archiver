@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--output', '-o', action='store', help='The output folder to store downloads into', dest='output', required=True)
     parser.add_argument('--key', '-k', action='store', help='The public key to check file signatures against', dest='key', default='update_verifier/lineageos_pubkey')
     parser.add_argument('--retain', '-r', action='store', help='The number of builds to be kept', dest='retain', type=int, default=None)
+    parser.add_argument('--only-validate-new', '-n', action='store_true', help='Only check new downloaded builds for validity', dest='only_validate_new', default=False)
     args = parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
@@ -109,6 +110,9 @@ def main():
 
             if os.path.isfile(filepath):
                 logging.debug("File '%s' exists, skipping download.", filepath)
+
+                if args.only_validate_new:
+                    continue
             elif os.path.isfile(oldpath := os.path.join(args.output, device, entry["filename"])):
                 logging.info("Moving file '%s' to '%s'", oldpath, filepath)
                 os.rename(oldpath, filepath)
