@@ -29,7 +29,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--updater",
-        "-u",
         action="store",
         help="The Updater instance that we want to download from",
         dest="updater",
@@ -37,7 +36,6 @@ def main():
     )
     parser.add_argument(
         "--list",
-        "-l",
         action="store",
         help='A URL to a list of devices in "hudson"-format',
         dest="list",
@@ -45,14 +43,12 @@ def main():
     )
     parser.add_argument(
         "--device",
-        "-d",
         action="store",
         help="A specific device selection (overrides hudson)",
         dest="device",
     )
     parser.add_argument(
         "--channel",
-        "-c",
         action="store",
         help="The release channel to download",
         dest="channel",
@@ -60,7 +56,6 @@ def main():
     )
     parser.add_argument(
         "--output",
-        "-o",
         action="store",
         help="The output folder to store downloads into",
         dest="output",
@@ -68,7 +63,6 @@ def main():
     )
     parser.add_argument(
         "--key",
-        "-k",
         action="store",
         help="The public key to check file signatures against",
         dest="key",
@@ -76,7 +70,6 @@ def main():
     )
     parser.add_argument(
         "--retain",
-        "-r",
         action="store",
         help="The number of builds to be kept",
         dest="retain",
@@ -85,7 +78,6 @@ def main():
     )
     parser.add_argument(
         "--only-validate-new",
-        "-n",
         action="store_true",
         help="Only check new downloaded builds for validity",
         dest="only_validate_new",
