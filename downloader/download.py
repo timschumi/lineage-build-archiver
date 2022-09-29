@@ -24,19 +24,80 @@ import sys
 from update_verifier import update_verifier
 import urllib
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--updater', '-u', action='store', help='The Updater instance that we want to download from', dest='updater', default='https://download.lineageos.org')
-    parser.add_argument('--list', '-l', action='store', help='A URL to a list of devices in "hudson"-format', dest='list', default='https://raw.githubusercontent.com/LineageOS/hudson/master/lineage-build-targets')
-    parser.add_argument('--device', '-d', action='store', help='A specific device selection (overrides hudson)', dest='device')
-    parser.add_argument('--channel', '-c', action='store', help='The release channel to download', dest='channel', default='nightly')
-    parser.add_argument('--output', '-o', action='store', help='The output folder to store downloads into', dest='output', required=True)
-    parser.add_argument('--key', '-k', action='store', help='The public key to check file signatures against', dest='key', default='update_verifier/lineageos_pubkey')
-    parser.add_argument('--retain', '-r', action='store', help='The number of builds to be kept', dest='retain', type=int, default=None)
-    parser.add_argument('--only-validate-new', '-n', action='store_true', help='Only check new downloaded builds for validity', dest='only_validate_new', default=False)
+    parser.add_argument(
+        "--updater",
+        "-u",
+        action="store",
+        help="The Updater instance that we want to download from",
+        dest="updater",
+        default="https://download.lineageos.org",
+    )
+    parser.add_argument(
+        "--list",
+        "-l",
+        action="store",
+        help='A URL to a list of devices in "hudson"-format',
+        dest="list",
+        default="https://raw.githubusercontent.com/LineageOS/hudson/master/lineage-build-targets",
+    )
+    parser.add_argument(
+        "--device",
+        "-d",
+        action="store",
+        help="A specific device selection (overrides hudson)",
+        dest="device",
+    )
+    parser.add_argument(
+        "--channel",
+        "-c",
+        action="store",
+        help="The release channel to download",
+        dest="channel",
+        default="nightly",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        action="store",
+        help="The output folder to store downloads into",
+        dest="output",
+        required=True,
+    )
+    parser.add_argument(
+        "--key",
+        "-k",
+        action="store",
+        help="The public key to check file signatures against",
+        dest="key",
+        default="update_verifier/lineageos_pubkey",
+    )
+    parser.add_argument(
+        "--retain",
+        "-r",
+        action="store",
+        help="The number of builds to be kept",
+        dest="retain",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--only-validate-new",
+        "-n",
+        action="store_true",
+        help="Only check new downloaded builds for validity",
+        dest="only_validate_new",
+        default=False,
+    )
     args = parser.parse_args()
 
-    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     if args.device:
         devices = [args.device]
@@ -46,7 +107,11 @@ def main():
         r = requests.get(args.list)
 
         if r.status_code != 200:
-            logging.error("Got status code %d while fetching devices from '%s', exiting...", r.status_code, args.list)
+            logging.error(
+                "Got status code %d while fetching devices from '%s', exiting...",
+                r.status_code,
+                args.list,
+            )
             return 1
 
         devices = []
@@ -55,7 +120,7 @@ def main():
             line = line.strip()
 
             # Skip comments
-            if line.startswith('#'):
+            if line.startswith("#"):
                 continue
 
             # Skip empty lines
@@ -85,25 +150,36 @@ def main():
         r = requests.get(url)
 
         if r.status_code != 200:
-            logging.warning("Got status code %d while requesting '%s', skipping...", r.status_code, url)
+            logging.warning(
+                "Got status code %d while requesting '%s', skipping...",
+                r.status_code,
+                url,
+            )
             continue
 
-        data = r.json()['response']
+        data = r.json()["response"]
         remaining_number_of_builds = {}
         processed_builds = []
 
         for entry in sorted(data, key=lambda x: x["datetime"], reverse=True):
             if entry["version"] not in remaining_number_of_builds:
-                remaining_number_of_builds[entry["version"]] = 0 if args.retain is None else args.retain
+                remaining_number_of_builds[entry["version"]] = (
+                    0 if args.retain is None else args.retain
+                )
 
-            if args.retain is not None and remaining_number_of_builds[entry["version"]] <= 0:
+            if (
+                args.retain is not None
+                and remaining_number_of_builds[entry["version"]] <= 0
+            ):
                 break
 
             processed_builds.append(entry)
             remaining_number_of_builds[entry["version"]] -= 1
 
         for entry in processed_builds:
-            filepath = os.path.join(args.output, device, entry["version"], entry["filename"])
+            filepath = os.path.join(
+                args.output, device, entry["version"], entry["filename"]
+            )
 
             if not os.path.isdir(filepath_dirname := os.path.dirname(filepath)):
                 os.makedirs(filepath_dirname)
@@ -113,7 +189,9 @@ def main():
 
                 if args.only_validate_new:
                     continue
-            elif os.path.isfile(oldpath := os.path.join(args.output, device, entry["filename"])):
+            elif os.path.isfile(
+                oldpath := os.path.join(args.output, device, entry["filename"])
+            ):
                 logging.info("Moving file '%s' to '%s'", oldpath, filepath)
                 os.rename(oldpath, filepath)
             else:
@@ -122,14 +200,24 @@ def main():
 
             filesize = os.path.getsize(filepath)
             if filesize != int(entry["size"]):
-                logging.warning("File '%s' has wrong file size (expected: %d, actual: %d)", filepath, int(entry["size"]), filesize)
+                logging.warning(
+                    "File '%s' has wrong file size (expected: %d, actual: %d)",
+                    filepath,
+                    int(entry["size"]),
+                    filesize,
+                )
                 os.remove(filepath)
                 continue
 
             signed_file = update_verifier.SignedFile(filepath)
             try:
                 signed_file.verify(args.key)
-            except (update_verifier.SignatureError, ValueError, TypeError, OSError) as e:
+            except (
+                update_verifier.SignatureError,
+                ValueError,
+                TypeError,
+                OSError,
+            ) as e:
                 logging.warning("File '%s' failed the signature check: %s", filepath, e)
                 os.remove(filepath)
                 continue
@@ -155,5 +243,6 @@ def main():
                 logging.info("Removing file '%s'", filepath)
                 os.remove(filepath)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())
