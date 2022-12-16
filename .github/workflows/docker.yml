@@ -49,6 +49,8 @@ jobs:
           pull: true
           tags: |
             docker.io/${{ env.DOCKER_REPO }}:latest
+            docker.io/${{ env.DOCKER_REPO }}-downloader:latest
             ghcr.io/${{ env.GHCR_REPO }}:latest
+            ghcr.io/${{ env.GHCR_REPO }}/downloader:latest
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
