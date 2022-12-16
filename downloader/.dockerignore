@@ -1,6 +1,7 @@
 **
 !/download.py
 !/entrypoint.sh
+!/index.py
 !/LICENSE
 !/requirements.txt
 !/update_verifier/LICENSE
