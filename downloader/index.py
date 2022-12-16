@@ -49,7 +49,7 @@ def main():
         f"host={os.environ.get('POSTGRES_HOST')}"
         f" user={os.environ.get('POSTGRES_USER')}"
         f" password={os.environ.get('POSTGRES_PASSWORD')}"
-        f" dbname={os.environ.get('POSTGRES_DB')}"
+        f" dbname={os.environ.get('POSTGRES_DATABASE')}"
     )
 
     with database_connection.cursor() as cursor:
