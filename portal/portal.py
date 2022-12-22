@@ -22,6 +22,8 @@ import os
 import psycopg
 import re
 
+import template
+
 app = flask.Flask(__name__)
 
 db = psycopg.connect(
@@ -34,8 +36,7 @@ db = psycopg.connect(
 
 @app.route("/")
 def overview() -> str:
-    with open("template/overview.tpl", "r") as file:
-        content = file.read()
+    content = template.load('overview')
 
     with db.cursor() as cursor:
         cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM builds;")
