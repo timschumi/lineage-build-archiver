@@ -60,16 +60,69 @@ def overview() -> str:
         """)
         (device_version_count,) = cursor.fetchone()
 
+        builds_table = "<table id='builds_table'>\n"
+        builds_table += "<tr><th>Filename</th><th>Filesize</th><th>SHA256</th><th>Status</th></tr>\n"
+
+        seen_builds = set()
+
         cursor.execute("""
-        SELECT builds.name, builds.size, build_hashes.value AS sha256
+        SELECT builds.id, builds.name, builds.size, build_hashes.value AS sha256, build_sources.value AS url
+        FROM builds
+        JOIN build_hashes ON builds.id = build_hashes.build_id
+        JOIN build_sources ON builds.id = build_sources.build_id
+        WHERE build_hashes.type = 'sha256'
+          AND build_sources.type = 'online'
+        ORDER BY builds.date DESC
+        """)
+        for e in cursor.fetchall():
+            builds_table += f"<tr>\n"
+            builds_table += f"  <td><pre>{e[1]}</pre></td>\n"
+            builds_table += f"  <td>{humanize.naturalsize(e[2])}</td>\n"
+            builds_table += f"  <td><pre>{e[3]}</pre></td>\n"
+            builds_table += f"  <td><a href='{e[4]}'>Download</a></td>\n"
+            builds_table += f"</tr>\n"
+            seen_builds.add(e[0])
+
+        cursor.execute("""
+        SELECT builds.id, builds.name, builds.size, build_hashes.value AS sha256
+        FROM builds
+        JOIN build_hashes ON builds.id = build_hashes.build_id
+        JOIN build_sources ON builds.id = build_sources.build_id
+        WHERE build_hashes.type = 'sha256'
+          AND build_sources.type = 'local'
+        ORDER BY builds.date DESC
+        """)
+        for e in cursor.fetchall():
+            if e[0] in seen_builds:
+                continue
+
+            builds_table += f"<tr>\n"
+            builds_table += f"  <td><pre>{e[1]}</pre></td>\n"
+            builds_table += f"  <td>{humanize.naturalsize(e[2])}</td>\n"
+            builds_table += f"  <td><pre>{e[3]}</pre></td>\n"
+            builds_table += f"  <td>Available</td>\n"
+            builds_table += f"</tr>\n"
+            seen_builds.add(e[0])
+
+        cursor.execute("""
+        SELECT builds.id, builds.name, builds.size, build_hashes.value AS sha256
         FROM builds
         JOIN build_hashes ON builds.id = build_hashes.build_id
         WHERE build_hashes.type = 'sha256'
         ORDER BY builds.date DESC
         """)
-        builds_table = "<table id='builds_table'>\n"
-        builds_table += "<tr><th>Filename</th><th>Filesize</th><th>SHA256</th></tr>\n"
-        builds_table += "\n".join([f"<tr><td><pre>{e[0]}</pre></td><td>{humanize.naturalsize(e[1])}</td><td><pre>{e[2]}</pre></td></tr>" for e in cursor.fetchall()])
+        for e in cursor.fetchall():
+            if e[0] in seen_builds:
+                continue
+
+            builds_table += f"<tr>\n"
+            builds_table += f"  <td><pre>{e[1]}</pre></td>\n"
+            builds_table += f"  <td>{humanize.naturalsize(e[2])}</td>\n"
+            builds_table += f"  <td><pre>{e[3]}</pre></td>\n"
+            builds_table += f"  <td>Unavailable</td>\n"
+            builds_table += f"</tr>\n"
+            seen_builds.add(e[0])
+
         builds_table += "</table>\n"
 
         db.commit()
