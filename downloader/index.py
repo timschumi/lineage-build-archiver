@@ -33,6 +33,13 @@ def main():
         action="store",
         help="The directory to index",
     )
+    parser.add_argument(
+        "--prune-local-sources",
+        action="store_true",
+        help="Delete no longer existing local sources from the database",
+        dest="prune_local_sources",
+        default=False,
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -90,6 +97,14 @@ def main():
             );
             """
         )
+        database_connection.commit()
+
+    with database_connection.cursor() as cursor:
+        builds = cursor.execute("SELECT id, value FROM build_sources WHERE type = 'local';").fetchall()
+        removed_ids = [(e[0],) for e in builds if not os.path.exists(os.path.join(args.directory, e[1]))]
+        if len(removed_ids) != 0:
+            logging.info("Removing builds with the following IDs: %s", [e[0] for e in removed_ids])
+            cursor.executemany("DELETE FROM build_sources WHERE id = %s;", removed_ids)
         database_connection.commit()
 
     info_from_name_regex = re.compile(
