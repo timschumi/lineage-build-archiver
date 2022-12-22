@@ -60,6 +60,18 @@ def overview() -> str:
         """)
         (device_version_count,) = cursor.fetchone()
 
+        cursor.execute("""
+        SELECT builds.name, builds.size, build_hashes.value AS sha256
+        FROM builds
+        JOIN build_hashes ON builds.id = build_hashes.build_id
+        WHERE build_hashes.type = 'sha256'
+        ORDER BY builds.date DESC
+        """)
+        builds_table = "<table id='builds_table'>\n"
+        builds_table += "<tr><th>Filename</th><th>Filesize</th><th>SHA256</th></tr>\n"
+        builds_table += "\n".join([f"<tr><td><pre>{e[0]}</pre></td><td>{humanize.naturalsize(e[1])}</td><td><pre>{e[2]}</pre></td></tr>" for e in cursor.fetchall()])
+        builds_table += "</table>\n"
+
         db.commit()
 
     # TODO: Do this by actually parsing and replacing arbitrary expressions.
@@ -71,6 +83,7 @@ def overview() -> str:
     content = re.sub(r"\{\{\s*device_count\s*\}\}", str(device_count), content)
     content = re.sub(r"\{\{\s*device_version_count\s*\}\}", str(device_version_count), content)
     content = re.sub(r"\{\{\s*device_version_size_estimate\s*\}\}", humanize.naturalsize(build_size_average * device_version_count), content)
+    content = re.sub(r"\{\{\s*builds_table\s*\}\}", builds_table, content)
 
     return content
 
