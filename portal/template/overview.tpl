@@ -12,7 +12,7 @@
 
       This covers <b>{{ device_count }} devices</b> and <b>{{ device_version_count }} device/version combinations</b>.
       With an average build size of <b>{{ build_size_average }}</b>, archiving one build of each device/version combination
-      would use <b>{{ device_version_size_estimate }}</b> of disk space.
+      would use approximately <b>{{ device_version_size_estimate }}</b> of disk space.
     </p>
   </body>
 </html>
