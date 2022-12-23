@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import ast
 import functools
 import re
+import typing
 
 __all__ = [
     "fill",
@@ -23,9 +25,20 @@ __all__ = [
 ]
 
 
-def fill(name: str, context: dict[str, str]) -> str:
+def fill(name: str, context: dict[str, typing.Any]) -> str:
     def evaluate_replacement(match: re.Match) -> str:
-        return context[match.group(1)]
+        fn = ast.parse("def _eval(): pass")
+        cmd = ast.parse(match.group(1))
+
+        if isinstance(cmd.body[-1], ast.Expr):
+            cmd.body[-1] = ast.Return(cmd.body[-1].value)
+            ast.fix_missing_locations(cmd.body[-1])
+
+        fn.body[0].body = cmd.body
+
+        exec(compile(fn, filename="<ast>", mode="exec"), context)
+
+        return str(eval("_eval()", context))
 
     return re.sub(r"\{\{\s*(.*?)\s*\}\}", evaluate_replacement, load(name))
 
