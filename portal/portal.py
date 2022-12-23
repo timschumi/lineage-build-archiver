@@ -36,8 +36,6 @@ db = psycopg.connect(
 
 @app.route("/")
 def overview() -> str:
-    content = template.load('overview')
-
     with db.cursor() as cursor:
         cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM builds;")
         (build_count_known, build_size_known, build_size_average) = cursor.fetchone()
@@ -128,18 +126,21 @@ def overview() -> str:
 
         db.commit()
 
-    # TODO: Do this by actually parsing and replacing arbitrary expressions.
-    content = re.sub(r"\{\{\s*build_count_known\s*\}\}", str(build_count_known), content)
-    content = re.sub(r"\{\{\s*build_size_known\s*\}\}", humanize.naturalsize(build_size_known), content)
-    content = re.sub(r"\{\{\s*build_count_stored\s*\}\}", str(build_count_stored), content)
-    content = re.sub(r"\{\{\s*build_size_stored\s*\}\}", humanize.naturalsize(build_size_stored), content)
-    content = re.sub(r"\{\{\s*build_size_average\s*\}\}", humanize.naturalsize(build_size_average), content)
-    content = re.sub(r"\{\{\s*device_count\s*\}\}", str(device_count), content)
-    content = re.sub(r"\{\{\s*device_version_count\s*\}\}", str(device_version_count), content)
-    content = re.sub(r"\{\{\s*device_version_size_estimate\s*\}\}", humanize.naturalsize(build_size_average * device_version_count), content)
-    content = re.sub(r"\{\{\s*builds_table\s*\}\}", builds_table, content)
+    context = {
+        "build_count_known": str(build_count_known),
+        "build_size_known": humanize.naturalsize(build_size_known),
+        "build_count_stored": str(build_count_stored),
+        "build_size_stored": humanize.naturalsize(build_size_stored),
+        "build_size_average": humanize.naturalsize(build_size_average),
+        "device_count": str(device_count),
+        "device_version_count": str(device_version_count),
+        "device_version_size_estimate": humanize.naturalsize(
+            build_size_average * device_version_count
+        ),
+        "builds_table": builds_table,
+    }
 
-    return content
+    return template.fill("overview", context)
 
 
 if __name__ == "__main__":

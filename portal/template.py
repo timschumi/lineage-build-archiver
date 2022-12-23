@@ -15,10 +15,19 @@ limitations under the License.
 """
 
 import functools
+import re
 
 __all__ = [
+    "fill",
     "load",
 ]
+
+
+def fill(name: str, context: dict[str, str]) -> str:
+    def evaluate_replacement(match: re.Match) -> str:
+        return context[match.group(1)]
+
+    return re.sub(r"\{\{\s*(.*?)\s*\}\}", evaluate_replacement, load(name))
 
 
 @functools.cache
