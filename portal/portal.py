@@ -59,10 +59,7 @@ def overview() -> str:
         """)
         (device_version_count,) = cursor.fetchone()
 
-        builds_table = "<table id='builds_table'>\n"
-        builds_table += "<tr><th>Filename</th><th>Filesize</th><th>SHA256</th><th>Status</th></tr>\n"
-
-        seen_builds = set()
+        builds = {}
 
         cursor.execute("""
         SELECT builds.id, builds.name, builds.size, build_hashes.value AS sha256, build_sources.value AS url
@@ -74,13 +71,15 @@ def overview() -> str:
         ORDER BY builds.date DESC
         """)
         for e in cursor.fetchall():
-            builds_table += f"<tr>\n"
-            builds_table += f"  <td><pre>{e[1]}</pre></td>\n"
-            builds_table += f"  <td>{humanize.naturalsize(e[2])}</td>\n"
-            builds_table += f"  <td><pre>{e[3]}</pre></td>\n"
-            builds_table += f"  <td><a href='{e[4]}'>Download</a></td>\n"
-            builds_table += f"</tr>\n"
-            seen_builds.add(e[0])
+            if e[0] in builds:
+                continue
+
+            builds[e[0]] = {
+                "filename": e[1],
+                "filesize": e[2],
+                "sha256": e[3],
+                "url": e[4],
+            }
 
         cursor.execute("""
         SELECT builds.id, builds.name, builds.size, build_hashes.value AS sha256
@@ -92,16 +91,15 @@ def overview() -> str:
         ORDER BY builds.date DESC
         """)
         for e in cursor.fetchall():
-            if e[0] in seen_builds:
+            if e[0] in builds:
                 continue
 
-            builds_table += f"<tr>\n"
-            builds_table += f"  <td><pre>{e[1]}</pre></td>\n"
-            builds_table += f"  <td>{humanize.naturalsize(e[2])}</td>\n"
-            builds_table += f"  <td><pre>{e[3]}</pre></td>\n"
-            builds_table += f"  <td>Available</td>\n"
-            builds_table += f"</tr>\n"
-            seen_builds.add(e[0])
+            builds[e[0]] = {
+                "filename": e[1],
+                "filesize": e[2],
+                "sha256": e[3],
+                "url": None,
+            }
 
         cursor.execute("""
         SELECT builds.id, builds.name, builds.size, build_hashes.value AS sha256
@@ -111,22 +109,20 @@ def overview() -> str:
         ORDER BY builds.date DESC
         """)
         for e in cursor.fetchall():
-            if e[0] in seen_builds:
+            if e[0] in builds:
                 continue
 
-            builds_table += f"<tr>\n"
-            builds_table += f"  <td><pre>{e[1]}</pre></td>\n"
-            builds_table += f"  <td>{humanize.naturalsize(e[2])}</td>\n"
-            builds_table += f"  <td><pre>{e[3]}</pre></td>\n"
-            builds_table += f"  <td>Unavailable</td>\n"
-            builds_table += f"</tr>\n"
-            seen_builds.add(e[0])
-
-        builds_table += "</table>\n"
+            builds[e[0]] = {
+                "filename": e[1],
+                "filesize": e[2],
+                "sha256": e[3],
+            }
 
         db.commit()
 
     context = {
+        "builds": builds,
+        "humanize": humanize,
         "build_count_known": str(build_count_known),
         "build_size_known": humanize.naturalsize(build_size_known),
         "build_count_stored": str(build_count_stored),
@@ -137,7 +133,6 @@ def overview() -> str:
         "device_version_size_estimate": humanize.naturalsize(
             build_size_average * device_version_count
         ),
-        "builds_table": builds_table,
     }
 
     return template.fill("overview", context)

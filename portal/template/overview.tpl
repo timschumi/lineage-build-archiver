@@ -28,7 +28,10 @@
     </p>
 
     <p>
-      {{ builds_table }}
+      <table id='builds_table'>
+        <tr><th>Filename</th><th>Filesize</th><th>SHA256</th><th>Status</th></tr>
+        {{ "\n".join(["<tr><td><pre>" + e['filename'] + "</pre></td><td>" + humanize.naturalsize(e['filesize']) + "</td><td><pre>" + e['sha256'] + "</pre></td><td>" + ("Unavailable" if 'url' not in e else ("Available" if e['url'] is None else "<a href='" + e['url'] + "'>Download</a>")) + "</td></tr>" for e in builds.values()]) }}
+      </table>
     </p>
   </body>
 </html>
