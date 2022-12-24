@@ -124,16 +124,13 @@ def overview() -> str:
         "builds": builds,
         "humanize": humanize,
         "template": template,
-        "build_count_known": str(build_count_known),
-        "build_size_known": humanize.naturalsize(build_size_known),
-        "build_count_stored": str(build_count_stored),
-        "build_size_stored": humanize.naturalsize(build_size_stored),
-        "build_size_average": humanize.naturalsize(build_size_average),
-        "device_count": str(device_count),
-        "device_version_count": str(device_version_count),
-        "device_version_size_estimate": humanize.naturalsize(
-            build_size_average * device_version_count
-        ),
+        "build_count_known": build_count_known,
+        "build_size_known": build_size_known,
+        "build_count_stored": build_count_stored,
+        "build_size_stored": build_size_stored,
+        "build_size_average": build_size_average,
+        "device_count": device_count,
+        "device_version_count": device_version_count,
     }
 
     return template.fill("overview", context)
