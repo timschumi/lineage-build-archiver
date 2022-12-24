@@ -30,7 +30,7 @@
     <p>
       <table id='builds_table'>
         <tr><th>Filename</th><th>Filesize</th><th>SHA256</th><th>Status</th></tr>
-        {{ "\n".join(["<tr><td><pre>" + e['filename'] + "</pre></td><td>" + humanize.naturalsize(e['filesize']) + "</td><td><pre>" + e['sha256'] + "</pre></td><td>" + ("Unavailable" if 'url' not in e else ("Available" if e['url'] is None else "<a href='" + e['url'] + "'>Download</a>")) + "</td></tr>" for e in builds.values()]) }}
+        {{ "\n".join([ template.fill("builds_table_row", { "humanize": humanize, "template": template, "build": e }) for e in builds.values()]) }}
       </table>
     </p>
   </body>

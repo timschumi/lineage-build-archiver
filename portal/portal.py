@@ -123,6 +123,7 @@ def overview() -> str:
     context = {
         "builds": builds,
         "humanize": humanize,
+        "template": template,
         "build_count_known": str(build_count_known),
         "build_size_known": humanize.naturalsize(build_size_known),
         "build_count_stored": str(build_count_stored),
