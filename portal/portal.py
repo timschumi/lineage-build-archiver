@@ -26,11 +26,16 @@ import template
 
 app = flask.Flask(__name__)
 
+POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
+POSTGRES_USER = os.environ.get('POSTGRES_USER')
+POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
+POSTGRES_DATABASE = os.environ.get('POSTGRES_DATABASE')
+
 db = psycopg.connect(
-    f"host={os.environ.get('POSTGRES_HOST')}"
-    f" user={os.environ.get('POSTGRES_USER')}"
-    f" password={os.environ.get('POSTGRES_PASSWORD')}"
-    f" dbname={os.environ.get('POSTGRES_DATABASE')}"
+    f"host={POSTGRES_HOST}"
+    f" user={POSTGRES_USER}"
+    f" password={POSTGRES_PASSWORD}"
+    f" dbname={POSTGRES_DATABASE}"
 )
 
 
