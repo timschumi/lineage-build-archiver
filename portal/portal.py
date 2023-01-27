@@ -23,8 +23,6 @@ import humanize
 import json
 import os
 import psycopg
-import re
-import time
 import threading
 
 import template
