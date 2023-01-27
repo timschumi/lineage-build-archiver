@@ -1,5 +1,5 @@
 **
 !template/
-!portal.py
+!*.py
 !requirements.txt
 
