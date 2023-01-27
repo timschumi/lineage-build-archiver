@@ -97,6 +97,8 @@ def upload_queue_task():
                 "INSERT INTO build_sources (build_id, type, value) VALUES (%s, 'online', %s);",
                 (build_id, url),
             )
+            
+            db.commit()
 
         del upload_queue[build_id]
 
