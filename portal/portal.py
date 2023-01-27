@@ -21,11 +21,18 @@ import botocore
 import flask
 import humanize
 import json
+import logging
 import os
 import psycopg
 import threading
 
 import template
+
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 app = flask.Flask(__name__)
 
@@ -73,13 +80,17 @@ def upload_queue_task():
             build_info["progress"] += chunk
             return
 
+        url = S3_DOWNLOAD_URL.format(bucket=S3_BUCKET, file=build_info["name"])
+
+        logging.info("Starting upload of '%s' to '%s'", build_info["path"], url)
+
         b2_bucket.upload_file(
             os.path.join(STORAGE_ROOT, build_info["path"]),
             build_info["name"],
             Callback=update_progress,
         )
 
-        url = S3_DOWNLOAD_URL.format(bucket=S3_BUCKET, file=build_info["name"])
+        logging.info("Done with upload of '%s' to '%s'", build_info["path"], url)
 
         with db.cursor() as cursor:
             cursor.execute(
