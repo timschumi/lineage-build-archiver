@@ -155,28 +155,33 @@ def overview() -> str:
         cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM builds;")
         (build_count_known, build_size_known, build_size_average) = cursor.fetchone()
 
-        cursor.execute("""
+        cursor.execute(
+            """
         SELECT COUNT(*), SUM(size) FROM builds
         WHERE EXISTS (
             SELECT value FROM build_sources
             WHERE builds.id = build_sources.build_id
         );
-        """)
+        """
+        )
         (build_count_stored, build_size_stored) = cursor.fetchone()
 
         cursor.execute("SELECT COUNT(DISTINCT device) FROM builds;")
         (device_count,) = cursor.fetchone()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*) FROM (
                 SELECT DISTINCT device, version FROM builds
             ) AS count;
-        """)
+        """
+        )
         (device_version_count,) = cursor.fetchone()
 
         builds = {}
 
-        cursor.execute("""
+        cursor.execute(
+            """
         SELECT builds.id,
                builds.name,
                builds.size,
@@ -193,7 +198,8 @@ def overview() -> str:
             WHEN source_local IS NOT NULL THEN 1
             ELSE 0
           END DESC, builds.date DESC
-        """)
+        """
+        )
         for e in cursor.fetchall():
             builds[e[0]] = {
                 "filename": e[1],
