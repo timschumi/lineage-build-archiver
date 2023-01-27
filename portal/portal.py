@@ -16,20 +16,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import boto3
+import botocore
 import flask
 import humanize
+import json
 import os
 import psycopg
 import re
+import time
+import threading
 
 import template
 
 app = flask.Flask(__name__)
 
-POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
-POSTGRES_USER = os.environ.get('POSTGRES_USER')
-POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
-POSTGRES_DATABASE = os.environ.get('POSTGRES_DATABASE')
+STORAGE_ROOT = os.environ.get("STORAGE_ROOT")
+
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
+POSTGRES_USER = os.environ.get("POSTGRES_USER")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
+POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE")
+
+S3_DOWNLOAD_URL = os.environ.get("S3_DOWNLOAD_URL")
+S3_ENDPOINT = os.environ.get("S3_ENDPOINT")
+S3_BUCKET = os.environ.get("S3_BUCKET")
+S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID")
+S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY")
 
 db = psycopg.connect(
     f"host={POSTGRES_HOST}"
@@ -37,6 +50,103 @@ db = psycopg.connect(
     f" password={POSTGRES_PASSWORD}"
     f" dbname={POSTGRES_DATABASE}"
 )
+
+b2 = boto3.resource(
+    service_name="s3",
+    endpoint_url=S3_ENDPOINT,
+    aws_access_key_id=S3_ACCESS_KEY_ID,
+    aws_secret_access_key=S3_ACCESS_KEY,
+    config=botocore.config.Config(signature_version="s3v4"),
+)
+b2_bucket = b2.Bucket(S3_BUCKET)
+
+upload_queue = {}
+upload_task = None
+
+
+def upload_queue_task():
+    while True:
+        if len(upload_queue) == 0:
+            break
+
+        (build_id, build_info) = next(iter(upload_queue.items()))
+
+        def update_progress(chunk):
+            build_info["progress"] += chunk
+            return
+
+        b2_bucket.upload_file(
+            os.path.join(STORAGE_ROOT, build_info["path"]),
+            build_info["name"],
+            Callback=update_progress,
+        )
+
+        url = S3_DOWNLOAD_URL.format(bucket=S3_BUCKET, file=build_info["name"])
+
+        with db.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO build_sources (build_id, type, value) VALUES (%s, 'online', %s);",
+                (build_id, url),
+            )
+
+        del upload_queue[build_id]
+
+
+@app.route("/api/uploads", methods=["POST"])
+def api_uploads_new():
+    global upload_task
+
+    request = json.loads(flask.request.data)
+    build_id = request["id"]
+
+    if type(build_id) != int:
+        return flask.jsonify({"message": "Invalid build ID type"}), 400
+
+    if build_id < 0:
+        return flask.jsonify({"message": "Build ID out of range"}), 400
+
+    if build_id in upload_queue:
+        return flask.jsonify({"message": "Build already in upload queue"}), 400
+
+    with db.cursor() as cursor:
+        cursor.execute("SELECT name, size FROM builds WHERE id = %s;", (build_id,))
+
+        if cursor.rowcount < 1:
+            return flask.jsonify({"message": "Build ID is unknown"}), 400
+
+        (build_name, build_size) = cursor.fetchone()
+
+        cursor.execute(
+            "SELECT value FROM build_sources WHERE build_id = %s AND type = 'local';",
+            (build_id,),
+        )
+
+        if cursor.rowcount < 1:
+            return flask.jsonify({"message": "Build is not available"}), 400
+
+        (build_path,) = cursor.fetchone()
+
+        cursor.execute(
+            "SELECT * FROM build_sources WHERE build_id = %s AND type = 'online';",
+            (build_id,),
+        )
+
+        if cursor.rowcount > 0:
+            return flask.jsonify({"message": "Build is already uploaded"}), 400
+
+    upload_queue[build_id] = {
+        "id": build_id,
+        "name": build_name,
+        "path": build_path,
+        "size": build_size,
+        "progress": 0,
+    }
+
+    if upload_task is None or not upload_task.is_alive():
+        upload_task = threading.Thread(target=upload_queue_task)
+        upload_task.start()
+
+    return flask.jsonify({}), 201
 
 
 @app.route("/")
