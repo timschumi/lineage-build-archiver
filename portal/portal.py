@@ -34,9 +34,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-app = flask.Flask(__name__,
-                  static_url_path='',
-                  static_folder='static')
+app = flask.Flask(__name__, static_url_path="", static_folder="static")
 
 STORAGE_ROOT = os.environ.get("STORAGE_ROOT")
 
@@ -131,14 +129,16 @@ def api_builds_list():
         """
         )
         for e in cursor.fetchall():
-            builds.append({
-                "id": e[0],
-                "filename": e[1],
-                "filesize": e[2],
-                "sha256": e[3],
-                "url": e[4],
-                "local": e[5],
-            })
+            builds.append(
+                {
+                    "id": e[0],
+                    "filename": e[1],
+                    "filesize": e[2],
+                    "sha256": e[3],
+                    "url": e[4],
+                    "local": e[5],
+                }
+            )
 
     return flask.jsonify(builds), 200
 
