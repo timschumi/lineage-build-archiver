@@ -239,6 +239,14 @@ def api_uploads_new():
     return flask.jsonify({}), 201
 
 
+@app.route("/api/uploads/<int:build_id>", methods=["GET"])
+def api_uploads_get(build_id):
+    if build_id not in upload_queue:
+        return flask.jsonify({"message": "Build ID not in upload queue"}), 404
+
+    return flask.jsonify(upload_queue[build_id]), 200
+
+
 @app.route("/")
 def overview() -> str:
     with db.cursor() as cursor:
