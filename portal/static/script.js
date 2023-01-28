@@ -4,6 +4,71 @@ function human_readable_size(size) {
     return (size / (1000 ** multiplier)).toFixed(multiplier > 0 ? 1 : 0) + " " + units[multiplier];
 }
 
+function request_upload(id) {
+    const table_entry = document.getElementById('builds_table_entry_' + id);
+
+    async function request() {
+        let response = await fetch('/api/uploads', {
+            method: 'POST',
+            body: JSON.stringify({"id": id}),
+        });
+
+        if (response.ok)
+            return;
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (error) {
+            throw new Error(response.statusText);
+        }
+
+        throw new Error(data['message']);
+    }
+
+    async function refresh() {
+        while (true) {
+            let response = await fetch('/api/uploads/' + id);
+
+            // Maybe the upload is done?
+            if (response.status === 404) {
+                let check_response = await fetch('/api/builds/' + id);
+                let check_data = await check_response.json();
+
+                if (check_data['url'] != null) {
+                    table_entry.innerHTML = "<a href='" + check_data['url'] + "'>Download</a>";
+                    return;
+                }
+            }
+
+            let data;
+            try {
+                data = await response.json();
+            } catch (error) {
+                throw new Error(response.statusText);
+            }
+
+            if (!response.ok) {
+                throw new Error(data['message']);
+            }
+
+            if (data['progress'] !== 0) {
+                table_entry.innerHTML = "Uploading (" + (100 * data['progress'] / data['size']).toFixed(1) + "%)";
+            } else {
+                table_entry.innerHTML = "Queued";
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    request()
+        .then(() => refresh())
+        .catch((error) => {
+            table_entry.innerHTML = "Upload failed: " + error;
+        });
+}
+
 // Populate the build table.
 fetch('/api/builds')
     .then((response) => response.json())
@@ -19,7 +84,7 @@ fetch('/api/builds')
             if (build['url'] != null)
                 row_contents.push("<td><a href='" + build['url'] + "'>Download</a></td>");
             else if (build['local'] != null)
-                row_contents.push("<td>Available</td>");
+                row_contents.push("<td id='builds_table_entry_" + build['id'] + "'><a href='javascript:request_upload(" + build['id'] + ")'>Request Upload</a></td>");
             else
                 row_contents.push("<td>Unavailable</td>");
 
