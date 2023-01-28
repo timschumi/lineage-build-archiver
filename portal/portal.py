@@ -196,7 +196,7 @@ def api_uploads_new():
         return flask.jsonify({"message": "Build ID out of range"}), 400
 
     if build_id in upload_queue:
-        return flask.jsonify({"message": "Build already in upload queue"}), 400
+        return flask.jsonify({}), 201
 
     with db.cursor() as cursor:
         cursor.execute("SELECT name, size FROM builds WHERE id = %s;", (build_id,))
@@ -222,7 +222,7 @@ def api_uploads_new():
         )
 
         if cursor.rowcount > 0:
-            return flask.jsonify({"message": "Build is already uploaded"}), 400
+            return flask.jsonify({}), 201
 
     upload_queue[build_id] = {
         "id": build_id,
