@@ -105,6 +105,44 @@ def upload_queue_task():
         del upload_queue[build_id]
 
 
+@app.route("/api/builds", methods=["GET"])
+def api_builds_list():
+    builds = []
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            """
+        SELECT builds.id,
+               builds.name,
+               builds.size,
+               build_hashes.value AS sha256,
+               source_online.value AS local,
+               source_local.value AS url
+        FROM builds
+        JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
+        LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
+        LEFT OUTER JOIN build_sources source_local ON builds.id = source_local.build_id AND source_local.type = 'local'
+        ORDER BY
+          CASE
+            WHEN source_online IS NOT NULL THEN 2
+            WHEN source_local IS NOT NULL THEN 1
+            ELSE 0
+          END DESC, builds.date DESC
+        """
+        )
+        for e in cursor.fetchall():
+            builds.append({
+                "id": e[0],
+                "filename": e[1],
+                "filesize": e[2],
+                "sha256": e[3],
+                "url": e[4],
+                "local": e[5],
+            })
+
+    return flask.jsonify(builds), 200
+
+
 @app.route("/api/uploads", methods=["POST"])
 def api_uploads_new():
     global upload_task
@@ -191,43 +229,10 @@ def overview() -> str:
         )
         (device_version_count,) = cursor.fetchone()
 
-        builds = {}
-
-        cursor.execute(
-            """
-        SELECT builds.id,
-               builds.name,
-               builds.size,
-               build_hashes.value AS sha256,
-               source_online.value AS local,
-               source_local.value AS url
-        FROM builds
-        JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
-        LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
-        LEFT OUTER JOIN build_sources source_local ON builds.id = source_local.build_id AND source_local.type = 'local'
-        ORDER BY
-          CASE
-            WHEN source_online IS NOT NULL THEN 2
-            WHEN source_local IS NOT NULL THEN 1
-            ELSE 0
-          END DESC, builds.date DESC
-        """
-        )
-        for e in cursor.fetchall():
-            builds[e[0]] = {
-                "filename": e[1],
-                "filesize": e[2],
-                "sha256": e[3],
-                "url": e[4],
-                "local": e[5],
-            }
-
         db.commit()
 
     context = {
-        "builds": builds,
         "humanize": humanize,
-        "template": template,
         "build_count_known": build_count_known,
         "build_size_known": build_size_known,
         "build_count_stored": build_count_stored,

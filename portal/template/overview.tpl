@@ -3,6 +3,7 @@
   <head>
     <title>LineageOS Build Archive</title>
     <link rel="stylesheet" type="text/css" href="/style.css">
+    <script src="/script.js" defer=""></script>
   </head>
   <body>
     <h1>LineageOS Build Archive</h1>
@@ -16,10 +17,15 @@
       would use approximately <b>{{ humanize.naturalsize(build_size_average * device_version_count) }}</b> of disk space.
     </p>
 
+    <noscript>
+      <p>
+        <b>Warning:</b> This page requires JavaScript to work properly.
+      </p>
+    </noscript>
+
     <p>
       <table id='builds_table'>
         <tr><th>Filename</th><th>Filesize</th><th>SHA256</th><th>Status</th></tr>
-        {{ "\n".join([ template.fill("builds_table_row", { "humanize": humanize, "template": template, "build": e }) for e in builds.values()]) }}
       </table>
     </p>
   </body>
