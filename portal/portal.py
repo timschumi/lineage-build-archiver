@@ -182,6 +182,11 @@ def api_builds_get(build_id):
         )
 
 
+@app.route("/api/uploads", methods=["GET"])
+def api_uploads_list():
+    return flask.jsonify([e for e in upload_queue.values()]), 200
+
+
 @app.route("/api/uploads", methods=["POST"])
 def api_uploads_new():
     global upload_task
