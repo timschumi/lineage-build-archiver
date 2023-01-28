@@ -143,6 +143,45 @@ def api_builds_list():
     return flask.jsonify(builds), 200
 
 
+@app.route("/api/builds/<int:build_id>", methods=["GET"])
+def api_builds_get(build_id):
+    with db.cursor() as cursor:
+        cursor.execute(
+            """
+        SELECT builds.id,
+               builds.name,
+               builds.size,
+               build_hashes.value AS sha256,
+               source_online.value AS local,
+               source_local.value AS url
+        FROM builds
+        JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
+        LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
+        LEFT OUTER JOIN build_sources source_local ON builds.id = source_local.build_id AND source_local.type = 'local'
+        WHERE builds.id = %s
+        """,
+            (build_id,),
+        )
+
+        if cursor.rowcount < 1:
+            return flask.jsonify({"message": "Build ID not found"}), 404
+
+        e = cursor.fetchone()
+        return (
+            flask.jsonify(
+                {
+                    "id": e[0],
+                    "filename": e[1],
+                    "filesize": e[2],
+                    "sha256": e[3],
+                    "url": e[4],
+                    "local": e[5],
+                }
+            ),
+            200,
+        )
+
+
 @app.route("/api/uploads", methods=["POST"])
 def api_uploads_new():
     global upload_task
