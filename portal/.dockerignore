@@ -2,4 +2,4 @@
 !template/
 !*.py
 !requirements.txt
-
+!static/

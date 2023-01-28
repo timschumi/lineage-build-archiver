@@ -34,7 +34,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-app = flask.Flask(__name__)
+app = flask.Flask(__name__,
+                  static_url_path='',
+                  static_folder='static')
 
 STORAGE_ROOT = os.environ.get("STORAGE_ROOT")
 

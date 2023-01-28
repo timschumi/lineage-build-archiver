@@ -2,18 +2,7 @@
 <html>
   <head>
     <title>LineageOS Build Archive</title>
-    <style>
-      #builds_table, #builds_table th, #builds_table td {
-        border: 1px solid black;
-        border-collapse: collapse;
-      }
-      #builds_table td {
-        padding: 5px;
-      }
-      #builds_table pre {
-        margin: 0px;
-      }
-    </style>
+    <link rel="stylesheet" type="text/css" href="/style.css">
   </head>
   <body>
     <h1>LineageOS Build Archive</h1>
