@@ -8,12 +8,10 @@ async function start_refresh_loop_for_build(id) {
     const table_entry = document.getElementById('builds_table_entry_' + id);
 
     if (table_entry == null) {
-        console.log("table entry for id " + id + " was null");
         return;
     }
 
     while (true) {
-        console.log("Checking for id " + id);
         let response = await fetch('/api/uploads/' + id);
 
         // Maybe the upload is done?
@@ -105,7 +103,6 @@ fetch('/api/builds')
             .then((response) => response.json())
             .then((uploads) => {
                 for (const upload of uploads) {
-                    console.log("Starting upload loop for id " + upload['id']);
                     start_refresh_loop_for_build(upload['id']).then(_ => {});
                 }
             })
