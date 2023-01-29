@@ -36,6 +36,10 @@ async function start_refresh_loop_for_build(id) {
             throw new Error(data['message']);
         }
 
+        if (data['error'] !== undefined) {
+            throw new Error(data['error']);
+        }
+
         if (data['progress'] !== 0) {
             table_entry.innerHTML = "Uploading (" + (100 * data['progress'] / data['size']).toFixed(1) + "%)";
         } else {

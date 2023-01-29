@@ -19,6 +19,7 @@ limitations under the License.
 import boto3
 from boto3.s3.transfer import TransferConfig
 import botocore
+import botocore.exceptions
 import flask
 import humanize
 import json
@@ -73,6 +74,7 @@ b2_config = boto3.s3.transfer.TransferConfig(**b2_config_settings)
 
 upload_queue = {}
 upload_task = None
+upload_queue_failed = {}
 
 
 def upload_queue_task():
@@ -90,12 +92,19 @@ def upload_queue_task():
 
         logging.info("Starting upload of '%s' to '%s'", build_info["path"], url)
 
-        b2_bucket.upload_file(
-            os.path.join(STORAGE_ROOT, build_info["path"]),
-            build_info["name"],
-            Callback=update_progress,
-            Config=b2_config,
-        )
+        try:
+            b2_bucket.upload_file(
+                os.path.join(STORAGE_ROOT, build_info["path"]),
+                build_info["name"],
+                Callback=update_progress,
+                Config=b2_config,
+            )
+        except botocore.exceptions.ConnectionClosedError:
+            logging.info("Failed upload of '%s' to '%s'", build_info["path"], url)
+            build_info["error"] = "S3 closed the connection. Disk full?"
+            upload_queue_failed[build_id] = build_info
+            del upload_queue[build_id]
+            continue
 
         logging.info("Done with upload of '%s' to '%s'", build_info["path"], url)
 
@@ -253,10 +262,13 @@ def api_uploads_new():
 
 @app.route("/api/uploads/<int:build_id>", methods=["GET"])
 def api_uploads_get(build_id):
-    if build_id not in upload_queue:
-        return flask.jsonify({"message": "Build ID not in upload queue"}), 404
+    if build_id in upload_queue:
+        return flask.jsonify(upload_queue[build_id]), 200
 
-    return flask.jsonify(upload_queue[build_id]), 200
+    if build_id in upload_queue_failed:
+        return flask.jsonify(upload_queue_failed[build_id]), 200
+
+    return flask.jsonify({"message": "Build ID not in upload queue"}), 404
 
 
 @app.route("/")
