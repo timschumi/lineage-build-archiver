@@ -17,6 +17,7 @@ limitations under the License.
 """
 
 import boto3
+from boto3.s3.transfer import TransferConfig
 import botocore
 import flask
 import humanize
@@ -48,6 +49,7 @@ S3_ENDPOINT = os.environ.get("S3_ENDPOINT")
 S3_BUCKET = os.environ.get("S3_BUCKET")
 S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID")
 S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY")
+S3_MAX_CONCURRENCY = os.environ.get("S3_MAX_CONCURRENCY")
 
 db = psycopg.connect(
     f"host={POSTGRES_HOST}"
@@ -64,6 +66,10 @@ b2 = boto3.resource(
     config=botocore.config.Config(signature_version="s3v4"),
 )
 b2_bucket = b2.Bucket(S3_BUCKET)
+b2_config_settings = {}
+if S3_MAX_CONCURRENCY is not None:
+    b2_config_settings["max_concurrency"] = int(S3_MAX_CONCURRENCY)
+b2_config = boto3.s3.transfer.TransferConfig(**b2_config_settings)
 
 upload_queue = {}
 upload_task = None
@@ -88,6 +94,7 @@ def upload_queue_task():
             os.path.join(STORAGE_ROOT, build_info["path"]),
             build_info["name"],
             Callback=update_progress,
+            Config=b2_config,
         )
 
         logging.info("Done with upload of '%s' to '%s'", build_info["path"], url)
