@@ -5,7 +5,7 @@ on:
     - cron: "0 0 * * 0"
   push:
     branches:
-      - 'master'
+      - 'standalone'
 
 env:
   GHCR_REPO: ${{ github.repository }}
