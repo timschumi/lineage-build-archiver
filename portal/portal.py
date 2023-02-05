@@ -143,6 +143,7 @@ def api_builds_list():
         JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
         LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
         LEFT OUTER JOIN build_sources source_local ON builds.id = source_local.build_id AND source_local.type = 'local'
+        WHERE source_online.value IS NOT NULL OR source_local.value IS NOT NULL
         ORDER BY
           CASE
             WHEN source_online IS NOT NULL THEN 2
