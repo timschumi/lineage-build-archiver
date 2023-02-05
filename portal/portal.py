@@ -137,8 +137,8 @@ def api_builds_list():
                builds.name,
                builds.size,
                build_hashes.value AS sha256,
-               source_online.value AS local,
-               source_local.value AS url
+               source_online.value AS url,
+               source_local.value AS path
         FROM builds
         JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
         LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
@@ -146,8 +146,8 @@ def api_builds_list():
         WHERE source_online.value IS NOT NULL OR source_local.value IS NOT NULL
         ORDER BY
           CASE
-            WHEN source_online IS NOT NULL THEN 2
-            WHEN source_local IS NOT NULL THEN 1
+            WHEN source_online.value IS NOT NULL THEN 2
+            WHEN source_local.value IS NOT NULL THEN 1
             ELSE 0
           END DESC, builds.date DESC
         """
@@ -160,7 +160,7 @@ def api_builds_list():
                     "filesize": e[2],
                     "sha256": e[3],
                     "url": e[4],
-                    "local": e[5],
+                    "path": e[5],
                 }
             )
 
@@ -176,8 +176,8 @@ def api_builds_get(build_id):
                builds.name,
                builds.size,
                build_hashes.value AS sha256,
-               source_online.value AS local,
-               source_local.value AS url
+               source_online.value AS url,
+               source_local.value AS path
         FROM builds
         JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
         LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
@@ -199,7 +199,7 @@ def api_builds_get(build_id):
                     "filesize": e[2],
                     "sha256": e[3],
                     "url": e[4],
-                    "local": e[5],
+                    "path": e[5],
                 }
             ),
             200,

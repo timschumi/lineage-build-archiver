@@ -93,7 +93,7 @@ fetch('/api/builds')
 
             if (build['url'] != null)
                 row_contents.push("<td><a href='" + build['url'] + "'>Download</a></td>");
-            else if (build['local'] != null)
+            else if (build['path'] != null)
                 row_contents.push("<td id='builds_table_entry_" + build['id'] + "'><a href='javascript:request_upload(" + build['id'] + ")'>Request Upload</a></td>");
             else
                 row_contents.push("<td>Unavailable</td>");
