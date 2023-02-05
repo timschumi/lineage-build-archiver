@@ -27,6 +27,7 @@ import logging
 import os
 import psycopg
 import threading
+import typing
 
 import template
 
@@ -52,12 +53,18 @@ S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID")
 S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY")
 S3_MAX_CONCURRENCY = os.environ.get("S3_MAX_CONCURRENCY")
 
-db = psycopg.connect(
-    f"host={POSTGRES_HOST}"
-    f" user={POSTGRES_USER}"
-    f" password={POSTGRES_PASSWORD}"
-    f" dbname={POSTGRES_DATABASE}"
-)
+
+def db() -> psycopg.Connection[typing.Any]:
+    if not hasattr(db, "connection") or db.connection.closed:
+        db.connection = psycopg.connect(
+            f"host={POSTGRES_HOST}"
+            f" user={POSTGRES_USER}"
+            f" password={POSTGRES_PASSWORD}"
+            f" dbname={POSTGRES_DATABASE}"
+        )
+
+    return db.connection
+
 
 b2 = boto3.resource(
     service_name="s3",
@@ -108,13 +115,13 @@ def upload_queue_task():
 
         logging.info("Done with upload of '%s' to '%s'", build_info["path"], url)
 
-        with db.cursor() as cursor:
+        with db().cursor() as cursor:
             cursor.execute(
                 "INSERT INTO build_sources (build_id, type, value) VALUES (%s, 'online', %s);",
                 (build_id, url),
             )
 
-            db.commit()
+            db().commit()
 
         del upload_queue[build_id]
 
@@ -123,7 +130,7 @@ def upload_queue_task():
 def api_builds_list():
     builds = []
 
-    with db.cursor() as cursor:
+    with db().cursor() as cursor:
         cursor.execute(
             """
         SELECT builds.id,
@@ -161,7 +168,7 @@ def api_builds_list():
 
 @app.route("/api/builds/<int:build_id>", methods=["GET"])
 def api_builds_get(build_id):
-    with db.cursor() as cursor:
+    with db().cursor() as cursor:
         cursor.execute(
             """
         SELECT builds.id,
@@ -219,7 +226,7 @@ def api_uploads_new():
     if build_id in upload_queue:
         return flask.jsonify({}), 201
 
-    with db.cursor() as cursor:
+    with db().cursor() as cursor:
         cursor.execute("SELECT name, size FROM builds WHERE id = %s;", (build_id,))
 
         if cursor.rowcount < 1:
@@ -273,7 +280,7 @@ def api_uploads_get(build_id):
 
 @app.route("/")
 def overview() -> str:
-    with db.cursor() as cursor:
+    with db().cursor() as cursor:
         cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM builds;")
         (build_count_known, build_size_known, build_size_average) = cursor.fetchone()
 
@@ -300,7 +307,7 @@ def overview() -> str:
         )
         (device_version_count,) = cursor.fetchone()
 
-        db.commit()
+        db().commit()
 
     context = {
         "humanize": humanize,
