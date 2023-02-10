@@ -17,12 +17,40 @@ limitations under the License.
 """
 
 import argparse
+import datetime
+import hashlib
 import logging
 import os
+import pathlib
+import psycopg
 import requests
 import sys
+import typing
 from update_verifier import update_verifier
 import urllib
+
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
+POSTGRES_USER = os.environ.get("POSTGRES_USER")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
+POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE")
+
+
+def db() -> psycopg.Connection[typing.Any]:
+    if hasattr(db, "connection"):
+        try:
+            db.connection.cursor().execute("SELECT 1")
+        except psycopg.OperationalError:
+            del db.connection
+
+    if not hasattr(db, "connection") or db.connection.closed:
+        db.connection = psycopg.connect(
+            f"host={POSTGRES_HOST}"
+            f" user={POSTGRES_USER}"
+            f" password={POSTGRES_PASSWORD}"
+            f" dbname={POSTGRES_DATABASE}"
+        )
+
+    return db.connection
 
 
 def main():
@@ -90,6 +118,46 @@ def main():
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+
+    with db().cursor() as cursor:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS builds (
+                id SERIAL PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                version TEXT NOT NULL,
+                date TEXT NOT NULL,
+                device TEXT NOT NULL,
+                size BIGINT NOT NULL,
+                UNIQUE (name),
+                UNIQUE (version, date, device)
+            );
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS build_hashes (
+                id SERIAL PRIMARY KEY NOT NULL,
+                build_id INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                value TEXT NOT NULL,
+                UNIQUE (build_id, type),
+                FOREIGN KEY (build_id) REFERENCES builds (id) ON DELETE CASCADE
+            );
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS build_sources (
+                id SERIAL PRIMARY KEY NOT NULL,
+                build_id INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                value TEXT NOT NULL,
+                FOREIGN KEY (build_id) REFERENCES builds (id) ON DELETE CASCADE
+            );
+            """
+        )
+        db().commit()
 
     if args.device:
         devices = [args.device]
@@ -214,6 +282,57 @@ def main():
                 os.remove(filepath)
                 continue
 
+            with db().cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO builds (name, version, date, device, size) VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT DO NOTHING
+                    RETURNING id;
+                    """,
+                    (
+                        entry["filename"],
+                        entry["version"],
+                        datetime.datetime.utcfromtimestamp(entry["datetime"]).strftime(
+                            "%Y%m%d"
+                        ),
+                        device,
+                        filesize,
+                    ),
+                )
+                if cursor.rowcount == 0:
+                    continue
+                new_id = cursor.fetchone()[0]
+                db().commit()
+
+            contents = pathlib.Path(filepath).read_bytes()
+            md5_sum = hashlib.md5(contents)
+            sha1_sum = hashlib.sha1(contents)
+            sha256_sum = hashlib.sha256(contents)
+            sha512_sum = hashlib.sha512(contents)
+
+            relative_path = os.path.relpath(filepath, args.output)
+
+            with db().cursor() as cursor:
+                cursor.executemany(
+                    """
+                    INSERT INTO build_hashes (build_id, type, value) VALUES (%s, %s, %s)
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    [
+                        (new_id, "md5", md5_sum.hexdigest()),
+                        (new_id, "sha1", sha1_sum.hexdigest()),
+                        (new_id, "sha256", sha256_sum.hexdigest()),
+                        (new_id, "sha512", sha512_sum.hexdigest()),
+                    ],
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO build_sources (build_id, type, value) VALUES (%s, %s, %s);
+                    """,
+                    (new_id, "local", relative_path),
+                )
+                db().commit()
+
         # If the number of kept builds is unlimited, we are done now
         if args.retain is None:
             continue
@@ -232,7 +351,14 @@ def main():
                     continue
 
                 filepath = os.path.join(versiondir, filename)
+                relative_path = os.path.relpath(filepath, args.output)
                 logging.info("Removing file '%s'", filepath)
+                with db().cursor() as cursor:
+                    cursor.execute(
+                        "DELETE FROM build_sources WHERE type = 'local' AND value = %s",
+                        (relative_path,),
+                    )
+                    db().commit()
                 os.remove(filepath)
 
 
