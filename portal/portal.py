@@ -55,6 +55,12 @@ S3_MAX_CONCURRENCY = os.environ.get("S3_MAX_CONCURRENCY")
 
 
 def db() -> psycopg.Connection[typing.Any]:
+    if hasattr(db, "connection"):
+        try:
+            db.connection.cursor().execute("SELECT 1")
+        except psycopg.OperationalError:
+            del db.connection
+
     if not hasattr(db, "connection") or db.connection.closed:
         db.connection = psycopg.connect(
             f"host={POSTGRES_HOST}"
