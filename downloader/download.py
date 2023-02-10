@@ -136,6 +136,11 @@ def main():
         )
         cursor.execute(
             """
+            ALTER TABLE builds ADD COLUMN IF NOT EXISTS available_upstream BOOLEAN NOT NULL DEFAULT FALSE;
+            """
+        )
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS build_hashes (
                 id SERIAL PRIMARY KEY NOT NULL,
                 build_id INTEGER NOT NULL,
@@ -221,6 +226,21 @@ def main():
         remaining_number_of_builds = {}
         processed_builds = []
 
+        with db().cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE builds SET available_upstream = FALSE WHERE device = %s;
+                """,
+                (device,),
+            )
+            cursor.executemany(
+                """
+                UPDATE builds SET available_upstream = TRUE WHERE name = %s;
+                """,
+                [(entry["filename"],) for entry in data],
+            )
+            db().commit()
+
         for entry in sorted(data, key=lambda x: x["datetime"], reverse=True):
             if entry["version"] not in remaining_number_of_builds:
                 remaining_number_of_builds[entry["version"]] = (
@@ -285,7 +305,7 @@ def main():
             with db().cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO builds (name, version, date, device, size) VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO builds (name, version, date, device, size, available_upstream) VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT DO NOTHING
                     RETURNING id;
                     """,
@@ -297,6 +317,7 @@ def main():
                         ),
                         device,
                         filesize,
+                        True,
                     ),
                 )
                 if cursor.rowcount == 0:
