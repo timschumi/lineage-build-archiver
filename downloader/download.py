@@ -129,14 +129,10 @@ def main():
                 date TEXT NOT NULL,
                 device TEXT NOT NULL,
                 size BIGINT NOT NULL,
+                available_upstream BOOLEAN NOT NULL DEFAULT FALSE,
                 UNIQUE (name),
                 UNIQUE (version, date, device)
             );
-            """
-        )
-        cursor.execute(
-            """
-            ALTER TABLE builds ADD COLUMN IF NOT EXISTS available_upstream BOOLEAN NOT NULL DEFAULT FALSE;
             """
         )
         cursor.execute(
