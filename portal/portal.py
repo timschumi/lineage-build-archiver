@@ -150,7 +150,7 @@ def api_builds_list():
         LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
         LEFT OUTER JOIN build_sources source_local ON builds.id = source_local.build_id AND source_local.type = 'local'
         WHERE source_online.value IS NOT NULL OR source_local.value IS NOT NULL
-          AND builds.available_upstream IS FALSE
+          AND NOT EXISTS (SELECT id FROM builds AS builds2 WHERE builds2.device = builds.device AND builds2.version = builds.version AND builds2.available_upstream IS TRUE)
         ORDER BY
           CASE
             WHEN source_online.value IS NOT NULL THEN 2
