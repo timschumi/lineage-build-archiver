@@ -205,7 +205,15 @@ def main():
     if not os.path.isdir(args.output):
         os.makedirs(args.output)
 
-    for device in devices:
+    with db().cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT device FROM builds WHERE available_upstream IS TRUE;
+            """
+        )
+        devices_for_refresh = [e[0] for e in cursor.fetchall()]
+
+    for device in set(devices + devices_for_refresh):
         url = f"{args.updater}/api/v1/{device}/{args.channel}/unused"
 
         r = requests.get(url)
@@ -236,6 +244,9 @@ def main():
                 [(entry["filename"],) for entry in data],
             )
             db().commit()
+
+        if device not in devices:
+            continue
 
         for entry in sorted(data, key=lambda x: x["datetime"], reverse=True):
             if entry["version"] not in remaining_number_of_builds:
