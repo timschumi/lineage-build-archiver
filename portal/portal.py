@@ -114,7 +114,7 @@ def upload_queue_task():
             )
         except botocore.exceptions.ConnectionClosedError:
             logging.info("Failed upload of '%s' to '%s'", build_info["path"], url)
-            build_info["error"] = "S3 closed the connection. Disk full?"
+            build_info["error"] = "S3 closed the connection. Storage quota reached?"
             upload_queue_failed[build_id] = build_info
             del upload_queue[build_id]
             continue
