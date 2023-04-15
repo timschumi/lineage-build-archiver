@@ -20,6 +20,7 @@ import boto3
 import botocore
 import botocore.exceptions
 import flask
+import flask_caching
 import json
 import logging
 import os
@@ -33,6 +34,7 @@ logging.basicConfig(
 )
 
 app = flask.Flask(__name__, static_url_path="", static_folder="static")
+app_cache = flask_caching.Cache(app, config={"CACHE_TYPE": "SimpleCache"})
 
 S3_DOWNLOAD_URL = os.environ.get("S3_DOWNLOAD_URL")
 S3_ENDPOINT = os.environ.get("S3_ENDPOINT")
@@ -51,6 +53,7 @@ b2_bucket = b2.Bucket(S3_BUCKET)
 
 
 @app.route("/api/builds", methods=["GET"])
+@app_cache.cached(timeout=3600)
 def api_builds_list():
     builds = []
 
