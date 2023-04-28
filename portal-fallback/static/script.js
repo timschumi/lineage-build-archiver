@@ -4,7 +4,7 @@ function human_readable_size(size) {
     return (size / (1000 ** multiplier)).toFixed(multiplier > 0 ? 1 : 0) + " " + units[multiplier];
 }
 
-fetch('/api/builds')
+fetch('/api/builds', { cache: "reload" })
     .then((response) => response.json())
     .then((builds) => {
         const builds_table = document.getElementById('builds_table');

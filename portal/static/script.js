@@ -12,11 +12,11 @@ async function start_refresh_loop_for_build(id) {
     }
 
     while (true) {
-        let response = await fetch('/api/uploads/' + id);
+        let response = await fetch('/api/uploads/' + id, { cache: "reload" });
 
         // Maybe the upload is done?
         if (response.status === 404) {
-            let check_response = await fetch('/api/builds/' + id);
+            let check_response = await fetch('/api/builds/' + id, { cache: "reload" });
             let check_data = await check_response.json();
 
             if (check_data['url'] != null) {
@@ -57,6 +57,7 @@ function request_upload(id) {
         let response = await fetch('/api/uploads', {
             method: 'POST',
             body: JSON.stringify({"id": id}),
+            cache: "reload",
         });
 
         if (response.ok)
@@ -80,7 +81,7 @@ function request_upload(id) {
 }
 
 // Populate the build table.
-fetch('/api/builds')
+fetch('/api/builds', { cache: "reload" })
     .then((response) => response.json())
     .then((builds) => {
         const builds_table = document.getElementById('builds_table');
@@ -103,7 +104,7 @@ fetch('/api/builds')
         }
 
         // Populate the currently uploading builds.
-        fetch('/api/uploads')
+        fetch('/api/uploads', { cache: "reload" })
             .then((response) => response.json())
             .then((uploads) => {
                 for (const upload of uploads) {
