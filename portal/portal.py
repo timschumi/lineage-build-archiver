@@ -26,6 +26,7 @@ import json
 import logging
 import os
 import psycopg
+import statsd
 import threading
 import typing
 
@@ -53,12 +54,18 @@ S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID")
 S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY")
 S3_MAX_CONCURRENCY = os.environ.get("S3_MAX_CONCURRENCY")
 
+STATSD_HOST = os.environ.get("STATSD_HOST")
+STATSD_PORT = os.environ.get("STATSD_PORT")
+
+stats = statsd.StatsClient(STATSD_HOST, STATSD_PORT, prefix='portal')
+
 
 def db() -> psycopg.Connection[typing.Any]:
     if hasattr(db, "connection"):
         try:
             db.connection.cursor().execute("SELECT 1")
         except psycopg.OperationalError:
+            stats.incr('database_connection_errors')
             del db.connection
 
     if not hasattr(db, "connection") or db.connection.closed:
@@ -92,6 +99,8 @@ upload_queue_failed = {}
 
 def upload_queue_task():
     while True:
+        stats.gauge('upload_queue_length', len(upload_queue))
+
         if len(upload_queue) == 0:
             break
 
@@ -114,6 +123,7 @@ def upload_queue_task():
             )
         except botocore.exceptions.ConnectionClosedError:
             logging.info("Failed upload of '%s' to '%s'", build_info["path"], url)
+            stats.incr('rejected_build_uploads')
             build_info["error"] = "S3 closed the connection. Storage quota reached?"
             upload_queue_failed[build_id] = build_info
             del upload_queue[build_id]
@@ -129,6 +139,7 @@ def upload_queue_task():
 
             db().commit()
 
+        stats.incr('uploaded_builds')
         del upload_queue[build_id]
 
 
@@ -136,7 +147,8 @@ def upload_queue_task():
 def api_builds_list():
     builds = []
 
-    with db().cursor() as cursor:
+    stats.incr('api_build_list_accesses')
+    with db().cursor() as cursor, stats.timer('api_build_list_generation'):
         cursor.execute(
             """
         SELECT builds.id,
@@ -176,7 +188,8 @@ def api_builds_list():
 
 @app.route("/api/builds/<int:build_id>", methods=["GET"])
 def api_builds_get(build_id):
-    with db().cursor() as cursor:
+    stats.incr('api_build_accesses')
+    with db().cursor() as cursor, stats.timer('api_build_generation'):
         cursor.execute(
             """
         SELECT builds.id,
@@ -215,6 +228,7 @@ def api_builds_get(build_id):
 
 @app.route("/api/uploads", methods=["GET"])
 def api_uploads_list():
+    stats.incr('api_upload_list_accesses')
     return flask.jsonify([e for e in upload_queue.values()]), 200
 
 
@@ -222,6 +236,7 @@ def api_uploads_list():
 def api_uploads_new():
     global upload_task
 
+    stats.incr('api_new_upload_accesses')
     request = json.loads(flask.request.data)
     build_id = request["id"]
 
@@ -260,6 +275,7 @@ def api_uploads_new():
         if cursor.rowcount > 0:
             return flask.jsonify({}), 201
 
+    stats.incr('upload_requests')
     upload_queue[build_id] = {
         "id": build_id,
         "name": build_name,
@@ -277,6 +293,8 @@ def api_uploads_new():
 
 @app.route("/api/uploads/<int:build_id>", methods=["GET"])
 def api_uploads_get(build_id):
+    stats.incr('api_upload_accesses')
+
     if build_id in upload_queue:
         return flask.jsonify(upload_queue[build_id]), 200
 
@@ -288,7 +306,9 @@ def api_uploads_get(build_id):
 
 @app.route("/")
 def overview() -> str:
-    with db().cursor() as cursor:
+    stats.incr('overview_accesses')
+
+    with db().cursor() as cursor, stats.timer('overview_stats_collection'):
         cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM builds;")
         (build_count_known, build_size_known, build_size_average) = cursor.fetchone()
 
@@ -317,6 +337,13 @@ def overview() -> str:
 
         db().commit()
 
+    stats.gauge('build_count_known', build_count_known)
+    stats.gauge('build_size_known', build_size_known)
+    stats.gauge('build_count_stored', build_count_stored)
+    stats.gauge('build_size_stored', build_size_stored)
+    stats.gauge('device_count', device_count)
+    stats.gauge('device_version_count', device_version_count)
+
     context = {
         "humanize": humanize,
         "build_count_known": build_count_known,
@@ -328,7 +355,8 @@ def overview() -> str:
         "device_version_count": device_version_count,
     }
 
-    return template.fill("overview", context)
+    with stats.timer('overview_template_fill'):
+        return template.fill("overview", context)
 
 
 if __name__ == "__main__":

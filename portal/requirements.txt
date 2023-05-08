@@ -3,3 +3,4 @@ flask
 gunicorn
 humanize
 psycopg
+statsd

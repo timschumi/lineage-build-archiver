@@ -24,6 +24,7 @@ import os
 import pathlib
 import psycopg
 import requests
+import statsd
 import sys
 import typing
 from update_verifier import update_verifier
@@ -34,12 +35,18 @@ POSTGRES_USER = os.environ.get("POSTGRES_USER")
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
 POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE")
 
+STATSD_HOST = os.environ.get("STATSD_HOST")
+STATSD_PORT = os.environ.get("STATSD_PORT")
+
+stats = statsd.StatsClient(STATSD_HOST, STATSD_PORT, prefix='downloader')
+
 
 def db() -> psycopg.Connection[typing.Any]:
     if hasattr(db, "connection"):
         try:
             db.connection.cursor().execute("SELECT 1")
         except psycopg.OperationalError:
+            stats.incr('database_connection_errors')
             del db.connection
 
     if not hasattr(db, "connection") or db.connection.closed:
@@ -197,6 +204,7 @@ def main():
             logging.error("Found no devices, exiting...")
             return 1
 
+        stats.gauge('upstream_devices', len(devices))
         logging.info("Found %d devices.", len(devices))
     else:
         logging.error("Need either a device selection or a list of devices, exiting...")
@@ -219,6 +227,7 @@ def main():
         r = requests.get(url)
 
         if r.status_code != 200:
+            stats.incr('device_fetch_failed')
             logging.warning(
                 "Got status code %d while requesting '%s', skipping...",
                 r.status_code,
@@ -230,7 +239,7 @@ def main():
         remaining_number_of_builds = {}
         processed_builds = []
 
-        with db().cursor() as cursor:
+        with db().cursor() as cursor, stats.timer('refresh_upstream_state'):
             cursor.execute(
                 """
                 UPDATE builds SET available_upstream = FALSE WHERE device = %s;
@@ -293,6 +302,7 @@ def main():
                     int(entry["size"]),
                     filesize,
                 )
+                stats.incr('download_failed_wrong_size')
                 os.remove(filepath)
                 continue
 
@@ -306,8 +316,12 @@ def main():
                 OSError,
             ) as e:
                 logging.warning("File '%s' failed the signature check: %s", filepath, e)
+                stats.incr('download_failed_wrong_signature')
                 os.remove(filepath)
                 continue
+
+            stats.incr('downloaded_builds')
+            stats.incr('downloaded_builds_size', filesize)
 
             with db().cursor() as cursor:
                 cursor.execute(
@@ -332,11 +346,12 @@ def main():
                 new_id = cursor.fetchone()[0]
                 db().commit()
 
-            contents = pathlib.Path(filepath).read_bytes()
-            md5_sum = hashlib.md5(contents)
-            sha1_sum = hashlib.sha1(contents)
-            sha256_sum = hashlib.sha256(contents)
-            sha512_sum = hashlib.sha512(contents)
+            with stats.timer('hash_calculation'):
+                contents = pathlib.Path(filepath).read_bytes()
+                md5_sum = hashlib.md5(contents)
+                sha1_sum = hashlib.sha1(contents)
+                sha256_sum = hashlib.sha256(contents)
+                sha512_sum = hashlib.sha512(contents)
 
             relative_path = os.path.relpath(filepath, args.output)
 
@@ -388,6 +403,7 @@ def main():
                     )
                     db().commit()
                 os.remove(filepath)
+                stats.incr('deleted_builds')
 
 
 if __name__ == "__main__":
