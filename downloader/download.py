@@ -285,11 +285,6 @@ def main():
 
                 if args.only_validate_new:
                     continue
-            elif os.path.isfile(
-                oldpath := os.path.join(args.output, device, entry["filename"])
-            ):
-                logging.info("Moving file '%s' to '%s'", oldpath, filepath)
-                os.rename(oldpath, filepath)
             else:
                 logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
                 urllib.request.urlretrieve(entry["url"], filepath)
