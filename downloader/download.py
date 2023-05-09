@@ -278,8 +278,15 @@ def main():
                 continue
 
             logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
+
             tempfilepath = filepath + ".part"
-            urllib.request.urlretrieve(entry["url"], tempfilepath)
+            with requests.get(entry["url"], stream=True) as download_request:
+                download_request.raise_for_status()
+
+                with open(tempfilepath, 'wb') as download_file:
+                    for download_chunk in download_request.iter_content(chunk_size=16384):
+                        download_file.write(download_chunk)
+                        stats.incr("downloaded_builds_size", len(download_chunk))
 
             filesize = os.path.getsize(tempfilepath)
             if filesize != int(entry["size"]):
@@ -316,7 +323,6 @@ def main():
                 sha512_sum = hashlib.sha512(contents)
 
             stats.incr("downloaded_builds")
-            stats.incr("downloaded_builds_size", filesize)
 
             with db().cursor() as cursor:
                 cursor.execute(
