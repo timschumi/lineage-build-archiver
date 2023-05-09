@@ -303,7 +303,8 @@ def main():
 
             signed_file = update_verifier.SignedFile(filepath)
             try:
-                signed_file.verify(args.key)
+                with stats.timer("signature_verification"):
+                    signed_file.verify(args.key)
             except (
                 update_verifier.SignatureError,
                 ValueError,
