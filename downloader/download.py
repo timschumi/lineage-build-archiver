@@ -288,6 +288,8 @@ def main():
             sha256_sum = hashlib.sha256()
             sha512_sum = hashlib.sha512()
 
+            file_chunks = []
+
             with requests.get(entry["url"], stream=True) as download_request:
                 download_request.raise_for_status()
 
@@ -303,6 +305,11 @@ def main():
                         sha512_sum.update(download_chunk)
                         hash_time += int((time.time() - hash_chunk_start) * 1000)
 
+                        file_chunks.append(download_chunk)
+
+            file_buffer = b"".join(file_chunks)
+            del file_chunks
+
             stats.timing("hash_calculation", hash_time)
 
             filesize = os.path.getsize(tempfilepath)
@@ -317,7 +324,7 @@ def main():
                 os.remove(tempfilepath)
                 continue
 
-            signed_file = update_verifier.SignedFile(tempfilepath)
+            signed_file = update_verifier.SignedFile(file_buffer)
             try:
                 with stats.timer("signature_verification"):
                     signed_file.verify(args.key)
