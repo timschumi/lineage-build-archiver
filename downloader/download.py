@@ -111,13 +111,6 @@ def main():
         type=int,
         default=None,
     )
-    parser.add_argument(
-        "--only-validate-new",
-        action="store_true",
-        help="Only check new downloaded builds for validity",
-        dest="only_validate_new",
-        default=False,
-    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -282,15 +275,11 @@ def main():
 
             if os.path.isfile(filepath):
                 logging.debug("File '%s' exists, skipping download.", filepath)
+                continue
 
-                if args.only_validate_new:
-                    continue
-
-                tempfilepath = filepath
-            else:
-                logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
-                tempfilepath = filepath + ".part"
-                urllib.request.urlretrieve(entry["url"], tempfilepath)
+            logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
+            tempfilepath = filepath + ".part"
+            urllib.request.urlretrieve(entry["url"], tempfilepath)
 
             filesize = os.path.getsize(tempfilepath)
             if filesize != int(entry["size"]):
