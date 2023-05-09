@@ -403,6 +403,10 @@ def main():
 
             # Traverse the remaining builds starting from the newest and remove any that do not fit
             for filename in sorted(local_builds, reverse=True):
+                if not filename.endswith(".zip"):
+                    logging.info("Found non-zip file '%s' while removing builds", filename)
+                    continue
+
                 if remaining_number_of_builds[version] > 0:
                     remaining_number_of_builds[version] -= 1
                     continue
