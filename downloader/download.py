@@ -26,6 +26,7 @@ import psycopg
 import requests
 import statsd
 import sys
+import time
 import typing
 from update_verifier import update_verifier
 import urllib
@@ -280,6 +281,13 @@ def main():
             logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
 
             tempfilepath = filepath + ".part"
+
+            hash_time = 0
+            md5_sum = hashlib.md5()
+            sha1_sum = hashlib.sha1()
+            sha256_sum = hashlib.sha256()
+            sha512_sum = hashlib.sha512()
+
             with requests.get(entry["url"], stream=True) as download_request:
                 download_request.raise_for_status()
 
@@ -287,6 +295,15 @@ def main():
                     for download_chunk in download_request.iter_content(chunk_size=16384):
                         download_file.write(download_chunk)
                         stats.incr("downloaded_builds_size", len(download_chunk))
+
+                        hash_chunk_start = time.time()
+                        md5_sum.update(download_chunk)
+                        sha1_sum.update(download_chunk)
+                        sha256_sum.update(download_chunk)
+                        sha512_sum.update(download_chunk)
+                        hash_time += int((time.time() - hash_chunk_start) * 1000)
+
+            stats.timing("hash_calculation", hash_time)
 
             filesize = os.path.getsize(tempfilepath)
             if filesize != int(entry["size"]):
@@ -314,13 +331,6 @@ def main():
                 stats.incr("download_failed_wrong_signature")
                 os.remove(tempfilepath)
                 continue
-
-            with stats.timer("hash_calculation"):
-                contents = pathlib.Path(tempfilepath).read_bytes()
-                md5_sum = hashlib.md5(contents)
-                sha1_sum = hashlib.sha1(contents)
-                sha256_sum = hashlib.sha256(contents)
-                sha512_sum = hashlib.sha512(contents)
 
             stats.incr("downloaded_builds")
 
