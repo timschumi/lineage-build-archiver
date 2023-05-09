@@ -285,11 +285,14 @@ def main():
 
                 if args.only_validate_new:
                     continue
+
+                tempfilepath = filepath
             else:
                 logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
-                urllib.request.urlretrieve(entry["url"], filepath)
+                tempfilepath = filepath + ".part"
+                urllib.request.urlretrieve(entry["url"], tempfilepath)
 
-            filesize = os.path.getsize(filepath)
+            filesize = os.path.getsize(tempfilepath)
             if filesize != int(entry["size"]):
                 logging.warning(
                     "File '%s' has wrong file size (expected: %d, actual: %d)",
@@ -298,10 +301,10 @@ def main():
                     filesize,
                 )
                 stats.incr("download_failed_wrong_size")
-                os.remove(filepath)
+                os.remove(tempfilepath)
                 continue
 
-            signed_file = update_verifier.SignedFile(filepath)
+            signed_file = update_verifier.SignedFile(tempfilepath)
             try:
                 with stats.timer("signature_verification"):
                     signed_file.verify(args.key)
@@ -313,8 +316,15 @@ def main():
             ) as e:
                 logging.warning("File '%s' failed the signature check: %s", filepath, e)
                 stats.incr("download_failed_wrong_signature")
-                os.remove(filepath)
+                os.remove(tempfilepath)
                 continue
+
+            with stats.timer("hash_calculation"):
+                contents = pathlib.Path(tempfilepath).read_bytes()
+                md5_sum = hashlib.md5(contents)
+                sha1_sum = hashlib.sha1(contents)
+                sha256_sum = hashlib.sha256(contents)
+                sha512_sum = hashlib.sha512(contents)
 
             stats.incr("downloaded_builds")
             stats.incr("downloaded_builds_size", filesize)
@@ -342,12 +352,8 @@ def main():
                 new_id = cursor.fetchone()[0]
                 db().commit()
 
-            with stats.timer("hash_calculation"):
-                contents = pathlib.Path(filepath).read_bytes()
-                md5_sum = hashlib.md5(contents)
-                sha1_sum = hashlib.sha1(contents)
-                sha256_sum = hashlib.sha256(contents)
-                sha512_sum = hashlib.sha512(contents)
+            if tempfilepath != filepath:
+                os.rename(tempfilepath, filepath)
 
             relative_path = os.path.relpath(filepath, args.output)
 
