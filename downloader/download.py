@@ -123,11 +123,11 @@ def main():
     with db().cursor() as cursor:
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS builds (
+            CREATE TABLE IF NOT EXISTS build (
                 id SERIAL PRIMARY KEY NOT NULL,
                 name TEXT NOT NULL,
-                version TEXT NOT NULL,
-                date TEXT NOT NULL,
+                version CHAR(4) NOT NULL,
+                date CHAR(8) NOT NULL,
                 device TEXT NOT NULL,
                 size BIGINT NOT NULL,
                 available_upstream BOOLEAN NOT NULL DEFAULT FALSE,
@@ -138,24 +138,67 @@ def main():
         )
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS build_hashes (
+            CREATE TABLE IF NOT EXISTS build_hash_md5 (
                 id SERIAL PRIMARY KEY NOT NULL,
-                build_id INTEGER NOT NULL,
-                type TEXT NOT NULL,
-                value TEXT NOT NULL,
-                UNIQUE (build_id, type),
-                FOREIGN KEY (build_id) REFERENCES builds (id) ON DELETE CASCADE
+                build INTEGER NOT NULL,
+                hash CHAR(32) NOT NULL,
+                UNIQUE (build),
+                FOREIGN KEY (build) REFERENCES build (id) ON DELETE CASCADE
             );
             """
         )
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS build_sources (
+            CREATE TABLE IF NOT EXISTS build_hash_sha1 (
                 id SERIAL PRIMARY KEY NOT NULL,
-                build_id INTEGER NOT NULL,
-                type TEXT NOT NULL,
-                value TEXT NOT NULL,
-                FOREIGN KEY (build_id) REFERENCES builds (id) ON DELETE CASCADE
+                build INTEGER NOT NULL,
+                hash CHAR(40) NOT NULL,
+                UNIQUE (build),
+                FOREIGN KEY (build) REFERENCES build (id) ON DELETE CASCADE
+            );
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS build_hash_sha256 (
+                id SERIAL PRIMARY KEY NOT NULL,
+                build INTEGER NOT NULL,
+                hash CHAR(64) NOT NULL,
+                UNIQUE (build),
+                FOREIGN KEY (build) REFERENCES build (id) ON DELETE CASCADE
+            );
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS build_hash_sha512 (
+                id SERIAL PRIMARY KEY NOT NULL,
+                build INTEGER NOT NULL,
+                hash CHAR(128) NOT NULL,
+                UNIQUE (build),
+                FOREIGN KEY (build) REFERENCES build (id) ON DELETE CASCADE
+            );
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS build_source_local (
+                id SERIAL PRIMARY KEY NOT NULL,
+                build INTEGER NOT NULL,
+                location TEXT NOT NULL,
+                UNIQUE (build),
+                FOREIGN KEY (build) REFERENCES build (id) ON DELETE CASCADE
+            );
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS build_source_online (
+                id SERIAL PRIMARY KEY NOT NULL,
+                build INTEGER NOT NULL,
+                location TEXT NOT NULL,
+                UNIQUE (build),
+                FOREIGN KEY (build) REFERENCES build (id) ON DELETE CASCADE
             );
             """
         )
@@ -210,7 +253,7 @@ def main():
     with db().cursor() as cursor:
         cursor.execute(
             """
-            SELECT DISTINCT device FROM builds WHERE available_upstream IS TRUE;
+            SELECT DISTINCT device FROM build WHERE available_upstream IS TRUE;
             """
         )
         devices_for_refresh = [e[0] for e in cursor.fetchall()]
@@ -236,13 +279,13 @@ def main():
         with db().cursor() as cursor, stats.timer("refresh_upstream_state"):
             cursor.execute(
                 """
-                UPDATE builds SET available_upstream = FALSE WHERE device = %s;
+                UPDATE build SET available_upstream = FALSE WHERE device = %s;
                 """,
                 (device,),
             )
             cursor.executemany(
                 """
-                UPDATE builds SET available_upstream = TRUE WHERE name = %s;
+                UPDATE build SET available_upstream = TRUE WHERE name = %s;
                 """,
                 [(entry["filename"],) for entry in data],
             )
@@ -337,7 +380,7 @@ def main():
             with db().cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO builds (name, version, date, device, size, available_upstream) VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO build (name, version, date, device, size, available_upstream) VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT DO NOTHING
                     RETURNING id;
                     """,
@@ -363,23 +406,35 @@ def main():
             relative_path = os.path.relpath(filepath, args.output)
 
             with db().cursor() as cursor:
-                cursor.executemany(
+                cursor.execute(
                     """
-                    INSERT INTO build_hashes (build_id, type, value) VALUES (%s, %s, %s)
-                    ON CONFLICT DO NOTHING;
+                    INSERT INTO build_hash_md5 (build, hash) VALUES (%s, %s) ON CONFLICT DO NOTHING;
                     """,
-                    [
-                        (new_id, "md5", md5_sum.hexdigest()),
-                        (new_id, "sha1", sha1_sum.hexdigest()),
-                        (new_id, "sha256", sha256_sum.hexdigest()),
-                        (new_id, "sha512", sha512_sum.hexdigest()),
-                    ],
+                    (new_id, md5_sum.hexdigest()),
                 )
                 cursor.execute(
                     """
-                    INSERT INTO build_sources (build_id, type, value) VALUES (%s, %s, %s);
+                    INSERT INTO build_hash_sha1 (build, hash) VALUES (%s, %s) ON CONFLICT DO NOTHING;
                     """,
-                    (new_id, "local", relative_path),
+                    (new_id, sha1_sum.hexdigest()),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO build_hash_sha256 (build, hash) VALUES (%s, %s) ON CONFLICT DO NOTHING;
+                    """,
+                    (new_id, sha256_sum.hexdigest()),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO build_hash_sha512 (build, hash) VALUES (%s, %s) ON CONFLICT DO NOTHING;
+                    """,
+                    (new_id, sha512_sum.hexdigest()),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO build_source_local (build, location) VALUES (%s, %s);
+                    """,
+                    (new_id, relative_path),
                 )
                 db().commit()
 
@@ -409,7 +464,7 @@ def main():
                 logging.info("Removing file '%s'", filepath)
                 with db().cursor() as cursor:
                     cursor.execute(
-                        "DELETE FROM build_sources WHERE type = 'local' AND value = %s",
+                        "DELETE FROM build_source_local WHERE location = %s",
                         (relative_path,),
                     )
                     db().commit()

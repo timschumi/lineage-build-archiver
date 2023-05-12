@@ -133,7 +133,7 @@ def upload_queue_task():
 
         with db().cursor() as cursor:
             cursor.execute(
-                "INSERT INTO build_sources (build_id, type, value) VALUES (%s, 'online', %s);",
+                "INSERT INTO build_source_online (build, location) VALUES (%s, %s);",
                 (build_id, url),
             )
 
@@ -151,24 +151,24 @@ def api_builds_list():
     with db().cursor() as cursor, stats.timer("api_build_list_generation"):
         cursor.execute(
             """
-        SELECT builds.id,
-               builds.name,
-               builds.size,
-               build_hashes.value AS sha256,
-               source_online.value AS url,
-               source_local.value AS path
-        FROM builds
-        JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
-        LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
-        LEFT OUTER JOIN build_sources source_local ON builds.id = source_local.build_id AND source_local.type = 'local'
-        WHERE source_online.value IS NOT NULL OR source_local.value IS NOT NULL
-          AND NOT EXISTS (SELECT id FROM builds AS builds2 WHERE builds2.device = builds.device AND builds2.version = builds.version AND builds2.available_upstream IS TRUE)
+        SELECT build.id,
+               build.name,
+               build.size,
+               build_hash_sha256.hash AS sha256,
+               build_source_online.location AS url,
+               build_source_local.location AS path
+        FROM build
+        JOIN build_hash_sha256 ON build.id = build_hash_sha256.build
+        LEFT OUTER JOIN build_source_online ON build.id = build_source_online.build
+        LEFT OUTER JOIN build_source_local ON build.id = build_source_local.build
+        WHERE build_source_online.location IS NOT NULL OR build_source_local.location IS NOT NULL
+          AND NOT EXISTS (SELECT id FROM build AS build2 WHERE build2.device = build.device AND build2.version = build.version AND build2.available_upstream IS TRUE)
         ORDER BY
           CASE
-            WHEN source_online.value IS NOT NULL THEN 2
-            WHEN source_local.value IS NOT NULL THEN 1
+            WHEN build_source_online.location IS NOT NULL THEN 2
+            WHEN build_source_local.location IS NOT NULL THEN 1
             ELSE 0
-          END DESC, builds.date DESC
+          END DESC, build.date DESC
         """
         )
         for e in cursor.fetchall():
@@ -192,17 +192,17 @@ def api_builds_get(build_id):
     with db().cursor() as cursor, stats.timer("api_build_generation"):
         cursor.execute(
             """
-        SELECT builds.id,
-               builds.name,
-               builds.size,
-               build_hashes.value AS sha256,
-               source_online.value AS url,
-               source_local.value AS path
-        FROM builds
-        JOIN build_hashes ON builds.id = build_hashes.build_id AND build_hashes.type = 'sha256'
-        LEFT OUTER JOIN build_sources source_online ON builds.id = source_online.build_id AND source_online.type = 'online'
-        LEFT OUTER JOIN build_sources source_local ON builds.id = source_local.build_id AND source_local.type = 'local'
-        WHERE builds.id = %s
+        SELECT build.id,
+               build.name,
+               build.size,
+               build_hash_sha256.hash AS sha256,
+               build_source_online.location AS url,
+               build_source_local.location AS path
+        FROM build
+        JOIN build_hash_sha256 ON build.id = build_hash_sha256.build
+        LEFT OUTER JOIN build_source_online ON build.id = build_source_online.build
+        LEFT OUTER JOIN build_source_local ON build.id = build_source_local.build
+        WHERE build.id = %s
         """,
             (build_id,),
         )
@@ -250,7 +250,7 @@ def api_uploads_new():
         return flask.jsonify({}), 201
 
     with db().cursor() as cursor:
-        cursor.execute("SELECT name, size FROM builds WHERE id = %s;", (build_id,))
+        cursor.execute("SELECT name, size FROM build WHERE id = %s;", (build_id,))
 
         if cursor.rowcount < 1:
             return flask.jsonify({"message": "Build ID is unknown"}), 400
@@ -258,7 +258,7 @@ def api_uploads_new():
         (build_name, build_size) = cursor.fetchone()
 
         cursor.execute(
-            "SELECT value FROM build_sources WHERE build_id = %s AND type = 'local';",
+            "SELECT location FROM build_source_local WHERE build = %s;",
             (build_id,),
         )
 
@@ -268,7 +268,7 @@ def api_uploads_new():
         (build_path,) = cursor.fetchone()
 
         cursor.execute(
-            "SELECT * FROM build_sources WHERE build_id = %s AND type = 'online';",
+            "SELECT * FROM build_source_online WHERE build = %s;",
             (build_id,),
         )
 
@@ -309,27 +309,30 @@ def overview() -> str:
     stats.incr("overview_accesses")
 
     with db().cursor() as cursor, stats.timer("overview_stats_collection"):
-        cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM builds;")
+        cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM build;")
         (build_count_known, build_size_known, build_size_average) = cursor.fetchone()
 
         cursor.execute(
             """
-        SELECT COUNT(*), SUM(size) FROM builds
+        SELECT COUNT(*), SUM(size) FROM build
         WHERE EXISTS (
-            SELECT value FROM build_sources
-            WHERE builds.id = build_sources.build_id
+            SELECT location FROM build_source_local
+            WHERE build.id = build_source_local.build
+        ) OR EXISTS (
+            SELECT location FROM build_source_online
+            WHERE build.id = build_source_online.build
         );
         """
         )
         (build_count_stored, build_size_stored) = cursor.fetchone()
 
-        cursor.execute("SELECT COUNT(DISTINCT device) FROM builds;")
+        cursor.execute("SELECT COUNT(DISTINCT device) FROM build;")
         (device_count,) = cursor.fetchone()
 
         cursor.execute(
             """
             SELECT COUNT(*) FROM (
-                SELECT DISTINCT device, version FROM builds
+                SELECT DISTINCT device, version FROM build
             ) AS count;
         """
         )
