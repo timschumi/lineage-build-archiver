@@ -21,7 +21,6 @@ from boto3.s3.transfer import TransferConfig
 import botocore
 import botocore.exceptions
 import flask
-import humanize
 import json
 import logging
 import os
@@ -29,8 +28,6 @@ import psycopg
 import statsd
 import threading
 import typing
-
-import template
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -304,11 +301,11 @@ def api_uploads_get(build_id):
     return flask.jsonify({"message": "Build ID not in upload queue"}), 404
 
 
-@app.route("/")
-def overview() -> str:
-    stats.incr("overview_accesses")
+@app.route("/api/statistics")
+def api_statistics():
+    stats.incr("statistics_accesses")
 
-    with db().cursor() as cursor, stats.timer("overview_stats_collection"):
+    with db().cursor() as cursor, stats.timer("statistics_collection"):
         cursor.execute("SELECT COUNT(*), SUM(size), AVG(size) FROM build;")
         (build_count_known, build_size_known, build_size_average) = cursor.fetchone()
 
@@ -347,8 +344,7 @@ def overview() -> str:
     stats.gauge("device_count", device_count)
     stats.gauge("device_version_count", device_version_count)
 
-    context = {
-        "humanize": humanize,
+    statistics = {
         "build_count_known": build_count_known,
         "build_size_known": build_size_known,
         "build_count_stored": build_count_stored,
@@ -358,8 +354,14 @@ def overview() -> str:
         "device_version_count": device_version_count,
     }
 
-    with stats.timer("overview_template_fill"):
-        return template.fill("overview", context)
+    return flask.jsonify(statistics), 200
+
+
+@app.route("/")
+def overview():
+    stats.incr("overview_accesses")
+    with stats.timer("overview_serve"):
+        return app.send_static_file("overview.html")
 
 
 if __name__ == "__main__":
