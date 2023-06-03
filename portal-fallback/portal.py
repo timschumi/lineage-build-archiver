@@ -73,9 +73,8 @@ def api_builds_list():
 
 
 @app.route("/")
-def overview() -> str:
-    with open("template/overview.tpl", "r") as file:
-        return file.read()
+def overview():
+    return app.send_static_file("overview.html")
 
 
 if __name__ == "__main__":
