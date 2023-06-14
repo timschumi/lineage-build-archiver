@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 while true; do
-    ./download.py --output /builds "${@}"
+    ./download.py "${@}"
 
     sleep `expr 60 \* ${UPDATE_INTERVAL}`
 done

@@ -31,6 +31,8 @@ import typing
 from update_verifier import update_verifier
 import urllib
 
+STORAGE_ROOT = os.environ.get("STORAGE_ROOT")
+
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
 POSTGRES_USER = os.environ.get("POSTGRES_USER")
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
@@ -89,13 +91,6 @@ def main():
         help="The release channel to download",
         dest="channel",
         default="nightly",
-    )
-    parser.add_argument(
-        "--output",
-        action="store",
-        help="The output folder to store downloads into",
-        dest="output",
-        required=True,
     )
     parser.add_argument(
         "--key",
@@ -247,8 +242,8 @@ def main():
         logging.error("Need either a device selection or a list of devices, exiting...")
         return 1
 
-    if not os.path.isdir(args.output):
-        os.makedirs(args.output)
+    if not os.path.isdir(STORAGE_ROOT):
+        os.makedirs(STORAGE_ROOT)
 
     with db().cursor() as cursor:
         cursor.execute(
@@ -311,7 +306,7 @@ def main():
 
         for entry in processed_builds:
             filepath = os.path.join(
-                args.output, device, entry["version"], entry["filename"]
+                STORAGE_ROOT, device, entry["version"], entry["filename"]
             )
 
             if not os.path.isdir(filepath_dirname := os.path.dirname(filepath)):
@@ -403,7 +398,7 @@ def main():
             if tempfilepath != filepath:
                 os.rename(tempfilepath, filepath)
 
-            relative_path = os.path.relpath(filepath, args.output)
+            relative_path = os.path.relpath(filepath, STORAGE_ROOT)
 
             with db().cursor() as cursor:
                 cursor.execute(
@@ -443,7 +438,7 @@ def main():
             continue
 
         for version in set([e["version"] for e in processed_builds]):
-            versiondir = os.path.join(args.output, device, version)
+            versiondir = os.path.join(STORAGE_ROOT, device, version)
             local_builds = set(os.listdir(versiondir))
 
             # Builds that were just downloaded are already accounted for
@@ -460,7 +455,7 @@ def main():
                     continue
 
                 filepath = os.path.join(versiondir, filename)
-                relative_path = os.path.relpath(filepath, args.output)
+                relative_path = os.path.relpath(filepath, STORAGE_ROOT)
                 logging.info("Removing file '%s'", filepath)
                 with db().cursor() as cursor:
                     cursor.execute(
