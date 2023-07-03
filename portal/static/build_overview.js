@@ -76,7 +76,7 @@ let build_id = Number(window.location.pathname.split('/').slice(-1));
 fetch('/api/builds/' + build_id, { cache: "reload" })
     .then((response) => response.json())
     .then((build) => {
-        document.title = "Build Overview: " + build['filename'];
+        document.title = build['filename'] + " - LineageOS Build Archive";
 
         const build_name_header = document.getElementById('build_name_header');
         build_name_header.innerHTML = build['filename'];
