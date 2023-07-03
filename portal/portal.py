@@ -160,12 +160,7 @@ def api_builds_list():
         LEFT OUTER JOIN build_source_local ON build.id = build_source_local.build
         WHERE build_source_online.location IS NOT NULL OR build_source_local.location IS NOT NULL
           AND NOT EXISTS (SELECT id FROM build AS build2 WHERE build2.device = build.device AND build2.version = build.version AND build2.available_upstream IS TRUE)
-        ORDER BY
-          CASE
-            WHEN build_source_online.location IS NOT NULL THEN 2
-            WHEN build_source_local.location IS NOT NULL THEN 1
-            ELSE 0
-          END DESC, build.date DESC
+        ORDER BY build.date DESC
         """
         )
         for e in cursor.fetchall():
