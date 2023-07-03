@@ -366,6 +366,11 @@ def build_overview(build_id):
         return app.send_static_file("build_overview.html")
 
 
+def generate_digest_file(entries):
+    for entry in entries:
+        yield f"{entry[0]}  {entry[1]}\n"
+
+
 @app.route("/MD5SUMS")
 def md5sums():
     stats.incr("md5sums_accesses")
@@ -388,7 +393,7 @@ def md5sums():
         db().commit()
 
     with stats.timer("md5sums_serve"):
-        response = flask.make_response("\n".join([f"{e[0]}  {e[1]}" for e in checksums]), 200)
+        response = flask.make_response(generate_digest_file(checksums), 200)
         response.headers["Content-Type"] = "text/plain; charset=utf-8"
         return response
 
@@ -415,7 +420,7 @@ def sha1sums():
         db().commit()
 
     with stats.timer("sha1sums_serve"):
-        response = flask.make_response("\n".join([f"{e[0]}  {e[1]}" for e in checksums]), 200)
+        response = flask.make_response(generate_digest_file(checksums), 200)
         response.headers["Content-Type"] = "text/plain; charset=utf-8"
         return response
 
@@ -442,7 +447,7 @@ def sha256sums():
         db().commit()
 
     with stats.timer("sha256sums_serve"):
-        response = flask.make_response("\n".join([f"{e[0]}  {e[1]}" for e in checksums]), 200)
+        response = flask.make_response(generate_digest_file(checksums), 200)
         response.headers["Content-Type"] = "text/plain; charset=utf-8"
         return response
 
@@ -469,7 +474,7 @@ def sha512sums():
         db().commit()
 
     with stats.timer("sha512sums_serve"):
-        response = flask.make_response("\n".join([f"{e[0]}  {e[1]}" for e in checksums]), 200)
+        response = flask.make_response(generate_digest_file(checksums), 200)
         response.headers["Content-Type"] = "text/plain; charset=utf-8"
         return response
 
