@@ -149,13 +149,8 @@ def api_builds_list():
         cursor.execute(
             """
         SELECT build.id,
-               build.name,
-               build.size,
-               build_hash_sha256.hash AS sha256,
-               build_source_online.location AS url,
-               build_source_local.location AS path
+               build.name
         FROM build
-        JOIN build_hash_sha256 ON build.id = build_hash_sha256.build
         LEFT OUTER JOIN build_source_online ON build.id = build_source_online.build
         LEFT OUTER JOIN build_source_local ON build.id = build_source_local.build
         WHERE build_source_online.location IS NOT NULL OR build_source_local.location IS NOT NULL
@@ -168,10 +163,6 @@ def api_builds_list():
                 {
                     "id": e[0],
                     "filename": e[1],
-                    "filesize": e[2],
-                    "sha256": e[3],
-                    "url": e[4],
-                    "path": e[5],
                 }
             )
 
