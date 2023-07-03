@@ -37,6 +37,7 @@ logging.basicConfig(
 
 app = flask.Flask(__name__, static_url_path="", static_folder="static")
 
+SITEMAP_PREFIX = os.environ.get("SITEMAP_PREFIX")
 STORAGE_ROOT = os.environ.get("STORAGE_ROOT")
 
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
@@ -477,6 +478,22 @@ def sha512sums():
         response = flask.make_response(generate_digest_file(checksums), 200)
         response.headers["Content-Type"] = "text/plain; charset=utf-8"
         return response
+
+
+@app.route("/sitemap_builds.txt")
+def sitemap_builds():
+    def generate():
+        stats.incr("sitemap_builds_accesses")
+
+        with db().cursor() as cursor, stats.timer("sitemap_builds_generate"):
+            cursor.execute("SELECT id FROM build WHERE build.available_upstream IS FALSE")
+
+            while row := cursor.fetchone():
+                yield f"{SITEMAP_PREFIX}/build/{row[0]}\n"
+
+    response = flask.make_response(generate(), 200)
+    response.headers["Content-Type"] = "text/plain; charset=utf-8"
+    return response
 
 
 if __name__ == "__main__":
