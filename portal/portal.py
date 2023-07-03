@@ -367,117 +367,48 @@ def build_overview(build_id):
         return app.send_static_file("build_overview.html")
 
 
-def generate_digest_file(entries):
-    for entry in entries:
-        yield f"{entry[0]}  {entry[1]}\n"
+def generate_digest_file(digest_type):
+    def generate():
+        stats.incr(f"{digest_type}sums_accesses")
+
+        with db().cursor() as cursor, stats.timer(f"{digest_type}sums_retrieval"):
+            cursor.execute(
+                f"""
+            SELECT build_hash_{digest_type}.hash AS md5,
+                   build.name
+            FROM build
+            JOIN build_hash_{digest_type} ON build.id = build_hash_{digest_type}.build
+            ORDER BY build.name ASC
+            """
+            )
+
+            while row := cursor.fetchone():
+                yield f"{row[0]}  {row[1]}\n"
+
+    with stats.timer(f"{digest_type}sums_serve"):
+        response = flask.make_response(generate(), 200)
+        response.headers["Content-Type"] = "text/plain; charset=utf-8"
+        return response
 
 
 @app.route("/MD5SUMS")
 def md5sums():
-    stats.incr("md5sums_accesses")
-
-    with db().cursor() as cursor, stats.timer("md5sums_retrieval"):
-        cursor.execute(
-            """
-        SELECT build_hash_md5.hash AS md5,
-               build.name
-        FROM build
-        JOIN build_hash_md5 ON build.id = build_hash_md5.build
-        ORDER BY build.name ASC
-        """
-        )
-
-        checksums = []
-        for e in cursor.fetchall():
-            checksums.append((e[0], e[1]))
-
-        db().commit()
-
-    with stats.timer("md5sums_serve"):
-        response = flask.make_response(generate_digest_file(checksums), 200)
-        response.headers["Content-Type"] = "text/plain; charset=utf-8"
-        return response
+    return generate_digest_file("md5")
 
 
 @app.route("/SHA1SUMS")
 def sha1sums():
-    stats.incr("sha1sums_accesses")
-
-    with db().cursor() as cursor, stats.timer("sha1sums_retrieval"):
-        cursor.execute(
-            """
-        SELECT build_hash_sha1.hash AS sha1,
-               build.name
-        FROM build
-        JOIN build_hash_sha1 ON build.id = build_hash_sha1.build
-        ORDER BY build.name ASC
-        """
-        )
-
-        checksums = []
-        for e in cursor.fetchall():
-            checksums.append((e[0], e[1]))
-
-        db().commit()
-
-    with stats.timer("sha1sums_serve"):
-        response = flask.make_response(generate_digest_file(checksums), 200)
-        response.headers["Content-Type"] = "text/plain; charset=utf-8"
-        return response
+    return generate_digest_file("sha1")
 
 
 @app.route("/SHA256SUMS")
 def sha256sums():
-    stats.incr("sha256sums_accesses")
-
-    with db().cursor() as cursor, stats.timer("sha256sums_retrieval"):
-        cursor.execute(
-            """
-        SELECT build_hash_sha256.hash AS sha256,
-               build.name
-        FROM build
-        JOIN build_hash_sha256 ON build.id = build_hash_sha256.build
-        ORDER BY build.name ASC
-        """
-        )
-
-        checksums = []
-        for e in cursor.fetchall():
-            checksums.append((e[0], e[1]))
-
-        db().commit()
-
-    with stats.timer("sha256sums_serve"):
-        response = flask.make_response(generate_digest_file(checksums), 200)
-        response.headers["Content-Type"] = "text/plain; charset=utf-8"
-        return response
+    return generate_digest_file("sha256")
 
 
 @app.route("/SHA512SUMS")
 def sha512sums():
-    stats.incr("sha512sums_accesses")
-
-    with db().cursor() as cursor, stats.timer("sha512sums_retrieval"):
-        cursor.execute(
-            """
-        SELECT build_hash_sha512.hash AS sha512,
-               build.name
-        FROM build
-        JOIN build_hash_sha512 ON build.id = build_hash_sha512.build
-        ORDER BY build.name ASC
-        """
-        )
-
-        checksums = []
-        for e in cursor.fetchall():
-            checksums.append((e[0], e[1]))
-
-        db().commit()
-
-    with stats.timer("sha512sums_serve"):
-        response = flask.make_response(generate_digest_file(checksums), 200)
-        response.headers["Content-Type"] = "text/plain; charset=utf-8"
-        return response
+    return generate_digest_file("sha512")
 
 
 @app.route("/sitemap_builds.txt")
