@@ -192,11 +192,17 @@ def api_builds_get(build_id):
         SELECT build.id,
                build.name,
                build.size,
+               build_hash_md5.hash AS md5,
+               build_hash_sha1.hash AS sha1,
                build_hash_sha256.hash AS sha256,
+               build_hash_sha512.hash AS sha512,
                build_source_online.location AS url,
                build_source_local.location AS path
         FROM build
-        JOIN build_hash_sha256 ON build.id = build_hash_sha256.build
+        LEFT OUTER JOIN build_hash_md5 ON build.id = build_hash_md5.build
+        LEFT OUTER JOIN build_hash_sha1 ON build.id = build_hash_sha1.build
+        LEFT OUTER JOIN build_hash_sha256 ON build.id = build_hash_sha256.build
+        LEFT OUTER JOIN build_hash_sha512 ON build.id = build_hash_sha512.build
         LEFT OUTER JOIN build_source_online ON build.id = build_source_online.build
         LEFT OUTER JOIN build_source_local ON build.id = build_source_local.build
         WHERE build.id = %s
@@ -214,9 +220,12 @@ def api_builds_get(build_id):
                     "id": e[0],
                     "filename": e[1],
                     "filesize": e[2],
-                    "sha256": e[3],
-                    "url": e[4],
-                    "path": e[5],
+                    "md5": e[3],
+                    "sha1": e[4],
+                    "sha256": e[5],
+                    "sha512": e[6],
+                    "url": e[7],
+                    "path": e[8],
                 }
             ),
             200,
@@ -362,6 +371,13 @@ def overview():
     stats.incr("overview_accesses")
     with stats.timer("overview_serve"):
         return app.send_static_file("overview.html")
+
+
+@app.route("/build/<int:build_id>", methods=["GET"])
+def build_overview(build_id):
+    stats.incr("build_overview_accesses")
+    with stats.timer("build_overview_serve"):
+        return app.send_static_file("build_overview.html")
 
 
 @app.route("/MD5SUMS")

@@ -1,0 +1,12 @@
+#information_table, #information_table th, #information_table td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+#information_table td, #information_table th {
+  padding: 5px;
+}
+
+#information_table pre {
+  margin: 0;
+}

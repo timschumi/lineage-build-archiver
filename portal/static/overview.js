@@ -82,7 +82,7 @@ fetch('/api/builds', { cache: "reload" })
 
         for (const build of builds) {
             let row_contents = [];
-            row_contents.push("<td><pre>" + build['filename'] + "</pre></td>");
+            row_contents.push("<td><a href='/build/" + build['id'] + "'><pre>" + build['filename'] + "</pre></a></td>");
             row_contents.push("<td>" + human_readable_size(build['filesize']) + "</td>");
             row_contents.push("<td><pre>" + build['sha256'] + "</pre></td>");
 
