@@ -9,7 +9,7 @@ fetch('/api/builds', { cache: "reload" })
 
             const row_filename = document.createElement("div");
             row_filename.classList.add("table-body-cell");
-            row_filename.innerHTML = "<a href='/build/" + build['id'] + "'><pre>" + build['filename'] + "</pre></a>";
+            row_filename.innerHTML = "<a class='monospace' href='/build/" + build['id'] + "'>" + build['filename'] + "</a>";
             row.appendChild(row_filename);
 
             builds_table_content.appendChild(row);

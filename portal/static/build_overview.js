@@ -82,22 +82,22 @@ fetch('/api/builds/' + build_id, { cache: "reload" })
         build_name_header.innerHTML = build['filename'];
 
         const table_filename = document.getElementById('table_filename');
-        table_filename.innerHTML = "<pre>" + build['filename'] + "</pre>";
+        table_filename.innerHTML = build['filename'];
 
         const table_filesize = document.getElementById('table_filesize');
         table_filesize.innerHTML = human_readable_size(build['filesize']) + " (" + build['filesize'] + " bytes)";
 
         const table_md5 = document.getElementById('table_md5');
-        table_md5.innerHTML = "<pre>" + build['md5'] + "</pre>";
+        table_md5.innerHTML = build['md5'];
 
         const table_sha1 = document.getElementById('table_sha1');
-        table_sha1.innerHTML = "<pre>" + build['sha1'] + "</pre>";
+        table_sha1.innerHTML = build['sha1'];
 
         const table_sha256 = document.getElementById('table_sha256');
-        table_sha256.innerHTML = "<pre>" + build['sha256'] + "</pre>";
+        table_sha256.innerHTML = build['sha256'];
 
         const table_sha512 = document.getElementById('table_sha512');
-        table_sha512.innerHTML = "<pre>" + build['sha512'] + "</pre>";
+        table_sha512.innerHTML = build['sha512'];
 
         const table_status = document.getElementById('table_status');
         if (build['url'] != null)

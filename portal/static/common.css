@@ -31,6 +31,6 @@
     border: 1px solid black;
 }
 
-pre {
-    margin: 0;
+.monospace {
+    font-family: monospace;
 }
