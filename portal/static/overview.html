@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>LineageOS Build Archive</title>
-    <link rel="stylesheet" type="text/css" href="/overview.css">
+    <link rel="stylesheet" type="text/css" href="/common.css">
     <script src="/common.js" defer=""></script>
     <script src="/overview.js" defer=""></script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -30,8 +30,12 @@
       </p>
     </noscript>
 
-    <table id='builds_table'>
-      <tr><th>Filename</th></tr>
-    </table>
+    <div class="table">
+      <div class="table-header">
+        <div class="table-header-cell">Filename</div>
+      </div>
+      <div class="table-body" id="builds_table_content">
+      </div>
+    </div>
   </body>
 </html>

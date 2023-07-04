@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>LineageOS Build Archive</title>
-    <link rel="stylesheet" type="text/css" href="/build_overview.css">
+    <link rel="stylesheet" type="text/css" href="/common.css">
     <script src="/common.js" defer=""></script>
     <script src="/build_overview.js" defer=""></script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -20,14 +20,37 @@
       </p>
     </noscript>
 
-    <table id='information_table'>
-      <tr><th>Filename</th><td id="table_filename">?</td></tr>
-      <tr><th>Filesize</th><td id="table_filesize">?</td></tr>
-      <tr><th>MD5</th><td id="table_md5">?</td></tr>
-      <tr><th>SHA1</th><td id="table_sha1">?</td></tr>
-      <tr><th>SHA256</th><td id="table_sha256">?</td></tr>
-      <tr><th>SHA512</th><td id="table_sha512">?</td></tr>
-      <tr><th>Status</th><td id="table_status">?</td></tr>
-    </table>
+    <div class="table">
+      <div class="table-body">
+        <div class="table-row">
+          <div class="table-header-cell">Filename</div>
+          <div class="table-body-cell" id="table_filename">?</div>
+        </div>
+        <div class="table-row">
+          <div class="table-header-cell">Filesize</div>
+          <div class="table-body-cell" id="table_filesize">?</div>
+        </div>
+        <div class="table-row">
+          <div class="table-header-cell">MD5</div>
+          <div class="table-body-cell" id="table_md5">?</div>
+        </div>
+        <div class="table-row">
+          <div class="table-header-cell">SHA1</div>
+          <div class="table-body-cell" id="table_sha1">?</div>
+        </div>
+        <div class="table-row">
+          <div class="table-header-cell">SHA256</div>
+          <div class="table-body-cell" id="table_sha256">?</div>
+        </div>
+        <div class="table-row">
+          <div class="table-header-cell">SHA512</div>
+          <div class="table-body-cell" id="table_sha512">?</div>
+        </div>
+        <div class="table-row">
+          <div class="table-header-cell">Status</div>
+          <div class="table-body-cell" id="table_status">?</div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

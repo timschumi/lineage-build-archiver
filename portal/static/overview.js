@@ -1,11 +1,18 @@
 fetch('/api/builds', { cache: "reload" })
     .then((response) => response.json())
     .then((builds) => {
-        const builds_table = document.getElementById('builds_table');
+        const builds_table_content = document.getElementById('builds_table_content');
 
         for (const build of builds) {
-            const new_row = builds_table.insertRow();
-            new_row.innerHTML = "<td><a href='/build/" + build['id'] + "'><pre>" + build['filename'] + "</pre></a></td>";
+            const row = document.createElement("div");
+            row.classList.add("table-row");
+
+            const row_filename = document.createElement("div");
+            row_filename.classList.add("table-body-cell");
+            row_filename.innerHTML = "<a href='/build/" + build['id'] + "'><pre>" + build['filename'] + "</pre></a>";
+            row.appendChild(row_filename);
+
+            builds_table_content.appendChild(row);
         }
     })
 

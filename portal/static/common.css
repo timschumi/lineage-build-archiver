@@ -1,0 +1,36 @@
+.table {
+    display: table;
+    max-width: 100%;
+    border-collapse: collapse;
+}
+
+.table-header {
+    display: table-header-group;
+}
+
+.table-header-cell {
+    display: table-cell;
+    padding: 5px;
+    border: 1px solid black;
+
+    text-align: center;
+    font-weight: bold;
+}
+
+.table-body {
+    display: table-row-group;
+}
+
+.table-row {
+    display: table-row;
+}
+
+.table-body-cell {
+    display: table-cell;
+    padding: 5px;
+    border: 1px solid black;
+}
+
+pre {
+    margin: 0;
+}
