@@ -10,7 +10,7 @@
 
 .table-header-cell {
     display: table-cell;
-    padding: 5px;
+    padding: 0.5em;
     border: 1px solid black;
 
     text-align: center;
@@ -27,7 +27,7 @@
 
 .table-body-cell {
     display: table-cell;
-    padding: 5px;
+    padding: 0.5em;
     border: 1px solid black;
 }
 
