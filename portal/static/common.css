@@ -38,3 +38,7 @@
 .wrap-anywhere {
     overflow-wrap: anywhere;
 }
+
+.bold {
+    font-weight: bold;
+}
