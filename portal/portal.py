@@ -417,7 +417,7 @@ def sitemap_builds():
         stats.incr("sitemap_builds_accesses")
 
         with db().cursor() as cursor, stats.timer("sitemap_builds_generate"):
-            cursor.execute("SELECT id FROM build WHERE build.available_upstream IS FALSE")
+            cursor.execute("SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC")
 
             while row := cursor.fetchone():
                 yield f"{SITEMAP_PREFIX}/build/{row[0]}\n"
