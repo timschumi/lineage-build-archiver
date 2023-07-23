@@ -72,6 +72,13 @@ function request_upload(build_id) {
 
 let build_id = Number(window.location.pathname.split('/').slice(-1));
 
+// Rebuild the correct canonical URL, just to make sure.
+let canonical_url = window.location.protocol + '//' + window.location.host + '/build/' + build_id;
+let canonical_tag = document.createElement('link');
+canonical_tag.setAttribute('rel', 'canonical');
+canonical_tag.href = canonical_url;
+document.head.appendChild(canonical_tag);
+
 // Populate the build table.
 fetch('/api/builds/' + build_id, { cache: "reload" })
     .then((response) => response.json())
