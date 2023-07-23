@@ -77,5 +77,20 @@ def overview():
     return app.send_static_file("overview.html")
 
 
+@app.route("/api/builds/<int:build_id>", methods=["GET"])
+@app.route("/api/uploads", methods=["GET"])
+@app.route("/api/uploads", methods=["POST"])
+@app.route("/api/uploads/<int:build_id>", methods=["GET"])
+@app.route("/api/statistics")
+@app.route("/build/<int:build_id>", methods=["GET"])
+@app.route("/MD5SUMS")
+@app.route("/SHA1SUMS")
+@app.route("/SHA256SUMS")
+@app.route("/SHA512SUMS")
+@app.route("/sitemap_builds.txt")
+def unavailable(*args, **kwargs):
+    return "Service Unavailable", 503
+
+
 if __name__ == "__main__":
     app.run(debug=False)
