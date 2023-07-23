@@ -105,5 +105,5 @@ fetch('/api/builds/' + build_id, { cache: "reload" })
         else if (build['path'] != null)
             table_status.innerHTML = "<a href='javascript:request_upload(" + build['id'] + ")'>Request Upload</a>";
         else
-            table_status.innerHTML = "Unavailable";
+            table_status.innerHTML = "Superseded";
     })
