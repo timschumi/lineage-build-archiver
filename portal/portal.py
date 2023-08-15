@@ -412,7 +412,9 @@ def sha512sums():
     return generate_digest_file("sha512")
 
 
-def get_sitemap_sites(limit=None, page=0, show_unavailable=False, show_upstream=False, **kwargs):
+def get_sitemap_sites(
+    limit=None, page=0, show_unavailable=False, show_upstream=False, **kwargs
+):
     # Page 0 is a special page where we dump static and extra pages.
     if int(page) == 0:
         yield ""
@@ -422,7 +424,7 @@ def get_sitemap_sites(limit=None, page=0, show_unavailable=False, show_upstream=
         yield "SHA512SUMS"
 
         if SITEMAP_EXTRA is not None:
-            for site in SITEMAP_EXTRA.split(','):
+            for site in SITEMAP_EXTRA.split(","):
                 site = site.strip()
 
                 if len(site) == 0:
@@ -445,7 +447,9 @@ def get_sitemap_sites(limit=None, page=0, show_unavailable=False, show_upstream=
         started_where = True
 
     if not bool(show_upstream):
-        query += f" {'AND' if started_where else 'WHERE'} build.available_upstream IS FALSE"
+        query += (
+            f" {'AND' if started_where else 'WHERE'} build.available_upstream IS FALSE"
+        )
         started_where = True
 
     if limit:
