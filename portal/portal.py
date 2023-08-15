@@ -38,6 +38,7 @@ logging.basicConfig(
 app = flask.Flask(__name__, static_url_path="", static_folder="static")
 
 SITEMAP_PREFIX = os.environ.get("SITEMAP_PREFIX")
+SITEMAP_EXTRA = os.environ.get("SITEMAP_EXTRA")
 STORAGE_ROOT = os.environ.get("STORAGE_ROOT")
 
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
@@ -412,13 +413,23 @@ def sha512sums():
 
 
 def get_sitemap_sites(limit=None, page=0, **kwargs):
-    # Page 0 is a special page where we dump static pages.
+    # Page 0 is a special page where we dump static and extra pages.
     if page == 0:
         yield ""
         yield "MD5SUMS"
         yield "SHA1SUMS"
         yield "SHA256SUMS"
         yield "SHA512SUMS"
+
+        if SITEMAP_EXTRA is not None:
+            for site in SITEMAP_EXTRA.split(','):
+                site = site.strip()
+
+                if len(site) == 0:
+                    continue
+
+                yield site
+
         return
 
     query = "SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC"
