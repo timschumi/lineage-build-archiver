@@ -411,16 +411,22 @@ def sha512sums():
     return generate_digest_file("sha512")
 
 
+def get_sitemap_sites():
+    with db().cursor() as cursor:
+        cursor.execute("SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC")
+
+        while row := cursor.fetchone():
+            yield f"build/{row[0]}"
+
+
 @app.route("/sitemap_builds.txt")
 def sitemap_builds():
     def generate():
         stats.incr("sitemap_builds_accesses")
 
-        with db().cursor() as cursor, stats.timer("sitemap_builds_generate"):
-            cursor.execute("SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC")
-
-            while row := cursor.fetchone():
-                yield f"{SITEMAP_PREFIX}/build/{row[0]}\n"
+        with stats.timer("sitemap_builds_generate"):
+            for site in get_sitemap_sites():
+                yield f"{SITEMAP_PREFIX}/{site}\n"
 
     response = flask.make_response(generate(), 200)
     response.headers["Content-Type"] = "text/plain; charset=utf-8"
