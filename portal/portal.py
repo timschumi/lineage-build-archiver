@@ -452,10 +452,10 @@ def get_sitemap_sites(
         )
         started_where = True
 
+    query += " ORDER BY build.id ASC"
+
     if limit:
         query += f" LIMIT {int(limit)} OFFSET {(int(page) - 1) * int(limit)}"
-
-    query += " ORDER BY build.id ASC"
 
     with db().cursor() as cursor:
         cursor.execute(query)
