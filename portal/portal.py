@@ -411,9 +411,14 @@ def sha512sums():
     return generate_digest_file("sha512")
 
 
-def get_sitemap_sites():
+def get_sitemap_sites(limit=None, page=1, **kwargs):
+    query = "SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC"
+
+    if limit:
+        query += f" LIMIT {int(limit)} OFFSET {(int(page) - 1) * int(limit)}"
+
     with db().cursor() as cursor:
-        cursor.execute("SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC")
+        cursor.execute(query)
 
         while row := cursor.fetchone():
             yield f"build/{row[0]}"
@@ -421,11 +426,13 @@ def get_sitemap_sites():
 
 @app.route("/sitemap_builds.txt")
 def sitemap_builds():
+    kwargs = flask.request.args
+
     def generate():
         stats.incr("sitemap_builds_accesses")
 
         with stats.timer("sitemap_builds_generate"):
-            for site in get_sitemap_sites():
+            for site in get_sitemap_sites(**kwargs):
                 yield f"{SITEMAP_PREFIX}/{site}\n"
 
     response = flask.make_response(generate(), 200)
