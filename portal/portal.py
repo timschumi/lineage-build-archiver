@@ -412,7 +412,7 @@ def sha512sums():
     return generate_digest_file("sha512")
 
 
-def get_sitemap_sites(limit=None, page=0, **kwargs):
+def get_sitemap_sites(limit=None, page=0, show_unavailable=False, show_upstream=False, **kwargs):
     # Page 0 is a special page where we dump static and extra pages.
     if page == 0:
         yield ""
@@ -432,10 +432,26 @@ def get_sitemap_sites(limit=None, page=0, **kwargs):
 
         return
 
-    query = "SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC"
+    query = "SELECT build.id FROM build"
+
+    started_where = False
+
+    if not bool(show_unavailable):
+        query += """
+        LEFT OUTER JOIN build_source_online ON build.id = build_source_online.build
+        LEFT OUTER JOIN build_source_local ON build.id = build_source_local.build
+        WHERE build_source_online.location IS NOT NULL OR build_source_local.location IS NOT NULL
+        """
+        started_where = True
+
+    if not bool(show_upstream):
+        query += f" {'AND' if started_where else 'WHERE'} build.available_upstream IS FALSE"
+        started_where = True
 
     if limit:
         query += f" LIMIT {int(limit)} OFFSET {(int(page) - 1) * int(limit)}"
+
+    query += " ORDER BY build.id ASC"
 
     with db().cursor() as cursor:
         cursor.execute(query)
