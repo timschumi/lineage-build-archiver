@@ -448,5 +448,27 @@ def sitemap_txt():
     return response
 
 
+@app.route("/sitemap.html")
+def sitemap_html():
+    kwargs = flask.request.args
+
+    def generate():
+        stats.incr("sitemap_html_accesses")
+
+        yield "<!DOCTYPE html>\n"
+        yield "<html>\n"
+        yield "  <body>\n"
+
+        with stats.timer("sitemap_html_generate"):
+            for site in get_sitemap_sites(**kwargs):
+                yield f"    <a href='/{site}'>/{site}</a>\n"
+
+        yield "  </body>\n"
+        yield "</html>\n"
+
+    response = flask.make_response(generate(), 200)
+    return response
+
+
 if __name__ == "__main__":
     app.run(debug=False)
