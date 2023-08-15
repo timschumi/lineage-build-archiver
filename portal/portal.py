@@ -411,7 +411,15 @@ def sha512sums():
     return generate_digest_file("sha512")
 
 
-def get_sitemap_sites(limit=None, page=1, **kwargs):
+def get_sitemap_sites(limit=None, page=0, **kwargs):
+    # Page 0 is a special page where we dump static pages.
+    if page == 0:
+        yield "MD5SUMS"
+        yield "SHA1SUMS"
+        yield "SHA256SUMS"
+        yield "SHA512SUMS"
+        return
+
     query = "SELECT id FROM build WHERE build.available_upstream IS FALSE ORDER BY id ASC"
 
     if limit:
@@ -424,14 +432,14 @@ def get_sitemap_sites(limit=None, page=1, **kwargs):
             yield f"build/{row[0]}"
 
 
-@app.route("/sitemap_builds.txt")
-def sitemap_builds():
+@app.route("/sitemap.txt")
+def sitemap_txt():
     kwargs = flask.request.args
 
     def generate():
-        stats.incr("sitemap_builds_accesses")
+        stats.incr("sitemap_txt_accesses")
 
-        with stats.timer("sitemap_builds_generate"):
+        with stats.timer("sitemap_txt_generate"):
             for site in get_sitemap_sites(**kwargs):
                 yield f"{SITEMAP_PREFIX}/{site}\n"
 
