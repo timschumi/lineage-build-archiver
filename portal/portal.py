@@ -414,7 +414,7 @@ def sha512sums():
 
 def get_sitemap_sites(limit=None, page=0, show_unavailable=False, show_upstream=False, **kwargs):
     # Page 0 is a special page where we dump static and extra pages.
-    if page == 0:
+    if int(page) == 0:
         yield ""
         yield "MD5SUMS"
         yield "SHA1SUMS"
