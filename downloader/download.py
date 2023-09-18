@@ -280,16 +280,19 @@ def main():
             continue
 
         for entry in sorted(data, key=lambda x: x["datetime"], reverse=True):
+            with db().cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(1) FROM build WHERE name = %s", (entry["filename"],)
+                )
+                if cursor.fetchone()[0] > 0:
+                    continue
+
             filepath = os.path.join(
                 STORAGE_ROOT, device, entry["version"], entry["filename"]
             )
 
             if not os.path.isdir(filepath_dirname := os.path.dirname(filepath)):
                 os.makedirs(filepath_dirname)
-
-            if os.path.isfile(filepath):
-                logging.debug("File '%s' exists, skipping download.", filepath)
-                continue
 
             logging.info("Downloading '%s' to '%s'...", entry["url"], filepath)
 
