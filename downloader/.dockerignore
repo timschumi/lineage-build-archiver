@@ -3,6 +3,7 @@
 !/entrypoint.sh
 !/import.py
 !/LICENSE
+!/prune.py
 !/requirements.txt
 !/update_verifier/LICENSE
 !/update_verifier/lineageos_pubkey
