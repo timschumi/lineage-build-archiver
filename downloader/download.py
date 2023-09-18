@@ -99,14 +99,6 @@ def main():
         dest="key",
         default="update_verifier/lineageos_pubkey",
     )
-    parser.add_argument(
-        "--retain",
-        action="store",
-        help="The number of builds to be kept",
-        dest="retain",
-        type=int,
-        default=None,
-    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -268,8 +260,6 @@ def main():
             continue
 
         data = r.json()["response"]
-        remaining_number_of_builds = {}
-        processed_builds = []
 
         with db().cursor() as cursor, stats.timer("refresh_upstream_state"):
             cursor.execute(
@@ -290,21 +280,6 @@ def main():
             continue
 
         for entry in sorted(data, key=lambda x: x["datetime"], reverse=True):
-            if entry["version"] not in remaining_number_of_builds:
-                remaining_number_of_builds[entry["version"]] = (
-                    0 if args.retain is None else args.retain
-                )
-
-            if (
-                args.retain is not None
-                and remaining_number_of_builds[entry["version"]] <= 0
-            ):
-                break
-
-            processed_builds.append(entry)
-            remaining_number_of_builds[entry["version"]] -= 1
-
-        for entry in processed_builds:
             filepath = os.path.join(
                 STORAGE_ROOT, device, entry["version"], entry["filename"]
             )
@@ -432,39 +407,6 @@ def main():
                     (new_id, relative_path),
                 )
                 db().commit()
-
-        # If the number of kept builds is unlimited, we are done now
-        if args.retain is None:
-            continue
-
-        for version in set([e["version"] for e in processed_builds]):
-            versiondir = os.path.join(STORAGE_ROOT, device, version)
-            local_builds = set(os.listdir(versiondir))
-
-            # Builds that were just downloaded are already accounted for
-            local_builds = local_builds - set([e["filename"] for e in processed_builds])
-
-            # Traverse the remaining builds starting from the newest and remove any that do not fit
-            for filename in sorted(local_builds, reverse=True):
-                if not filename.endswith(".zip"):
-                    logging.info("Found non-zip file '%s' while removing builds", filename)
-                    continue
-
-                if remaining_number_of_builds[version] > 0:
-                    remaining_number_of_builds[version] -= 1
-                    continue
-
-                filepath = os.path.join(versiondir, filename)
-                relative_path = os.path.relpath(filepath, STORAGE_ROOT)
-                logging.info("Removing file '%s'", filepath)
-                with db().cursor() as cursor:
-                    cursor.execute(
-                        "DELETE FROM build_source_local WHERE location = %s",
-                        (relative_path,),
-                    )
-                    db().commit()
-                os.remove(filepath)
-                stats.incr("deleted_builds")
 
 
 if __name__ == "__main__":

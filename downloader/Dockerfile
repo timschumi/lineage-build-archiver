@@ -5,8 +5,10 @@ WORKDIR /usr/src/app
 COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 
+ENV DOWNLOAD_ARGS=""
+ENV PRUNE_ARGS=""
 ENV STORAGE_ROOT=/builds
 ENV UPDATE_INTERVAL=1440
 VOLUME /builds
 
-ENTRYPOINT [ "./entrypoint.sh" ]
+CMD [ "./entrypoint.sh" ]
