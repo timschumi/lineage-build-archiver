@@ -360,9 +360,9 @@ def main():
                     (
                         entry["filename"],
                         entry["version"],
-                        datetime.datetime.utcfromtimestamp(entry["datetime"]).strftime(
-                            "%Y%m%d"
-                        ),
+                        datetime.datetime.fromtimestamp(
+                            entry["datetime"], datetime.UTC
+                        ).strftime("%Y%m%d"),
                         device,
                         filesize,
                         True,
