@@ -1,6 +1,7 @@
 **
 !/download.py
 !/entrypoint.sh
+!/export.py
 !/import.py
 !/LICENSE
 !/prune.py
