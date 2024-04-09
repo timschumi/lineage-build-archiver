@@ -42,3 +42,19 @@
 .bold {
     font-weight: bold;
 }
+
+.flex {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.flex-table-group > div.table {
+    height: fit-content;
+    margin: 0.5rem;
+    flex-basis: 0;
+    flex-grow: 1;
+}
+
+.nowrap {
+    text-wrap: nowrap;
+}

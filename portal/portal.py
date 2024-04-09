@@ -151,7 +151,8 @@ def api_builds_list():
         cursor.execute(
             """
         SELECT build.id,
-               build.name
+               build.name,
+               build.device
         FROM build
         LEFT OUTER JOIN build_source_online ON build.id = build_source_online.build
         LEFT OUTER JOIN build_source_local ON build.id = build_source_local.build
@@ -165,6 +166,7 @@ def api_builds_list():
                 {
                     "id": e[0],
                     "filename": e[1],
+                    "device": e[2],
                 }
             )
 
