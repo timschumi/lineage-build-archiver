@@ -88,7 +88,7 @@ explicitly. This includes the URL to the updater page, the list of devices, the 
 the on-disk path to the public key that build signatures should be checked against:
 
 ```
-./download.py --output builds --updater https://download.lineageos.org --list https://raw.githubusercontent.com/LineageOS/hudson/master/lineage-build-targets --channel nightly --key update_verifier/lineageos_pubkey
+./download.py --output builds --updater https://download.lineageos.org --list https://raw.githubusercontent.com/LineageOS/hudson/main/lineage-build-targets --channel nightly --key update_verifier/lineageos_pubkey
 ```
 
 ### Running in Docker

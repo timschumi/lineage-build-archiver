@@ -77,7 +77,7 @@ def main():
         action="store",
         help='A URL to a list of devices in "hudson"-format',
         dest="list",
-        default="https://raw.githubusercontent.com/LineageOS/hudson/master/lineage-build-targets",
+        default="https://raw.githubusercontent.com/LineageOS/hudson/main/lineage-build-targets",
     )
     parser.add_argument(
         "--device",
