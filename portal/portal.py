@@ -327,12 +327,13 @@ def api_statistics():
 
         cursor.execute(
             """
-            SELECT COUNT(*) FROM (
-                SELECT DISTINCT device, version FROM build
-            ) AS count;
+            SELECT COUNT(*), SUM(max) FROM (
+                SELECT MAX(size), device, version FROM build
+                    GROUP BY device, version
+            );
         """
         )
-        (device_version_count,) = cursor.fetchone()
+        (device_version_count, device_version_size) = cursor.fetchone()
 
         db().commit()
 
@@ -351,6 +352,7 @@ def api_statistics():
         "build_size_average": build_size_average,
         "device_count": device_count,
         "device_version_count": device_version_count,
+        "device_version_size": device_version_size,
     }
 
     return flask.jsonify(statistics), 200

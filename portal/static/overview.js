@@ -72,7 +72,7 @@ fetch('/api/statistics', { cache: "reload" })
         fill_statistic("stat_device_count", statistics["device_count"])
         fill_statistic("stat_device_version_count", statistics["device_version_count"])
         fill_statistic("stat_build_size_average", human_readable_size(statistics["build_size_average"]))
-        fill_statistic("stat_build_size_total", human_readable_size(statistics["build_size_average"] * statistics["device_version_count"]))
+        fill_statistic("stat_build_size_total", human_readable_size(statistics["device_version_size"] || (statistics["build_size_average"] * statistics["device_version_count"])))
     })
 
 function refresh_filter() {
