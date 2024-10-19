@@ -1,5 +1,4 @@
-oscrypto==1.3.0
-asn1crypto==1.5.1
+-r update_verifier/requirements.txt
 
 psycopg
 requests

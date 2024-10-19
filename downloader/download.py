@@ -338,7 +338,7 @@ def main():
                 with stats.timer("signature_verification"):
                     signed_file.verify(args.key)
             except (
-                update_verifier.SignatureError,
+                update_verifier.InvalidSignature,
                 ValueError,
                 TypeError,
                 OSError,
